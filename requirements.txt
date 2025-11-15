@@ -1,2 +1,5 @@
 streamlit>=1.28.0
-   requests>=2.31.0
+streamlit
+requests
+python-dotenv
+requests>=2.31.0
