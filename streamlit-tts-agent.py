@@ -228,6 +228,14 @@ st.markdown("""
         backdrop-filter: blur(10px);
     }
     
+    .stWarning {
+        background: linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.2) 100%) !important;
+        border-left: 4px solid #fbbf24 !important;
+        border-radius: 8px !important;
+        color: #fef3c7 !important;
+        backdrop-filter: blur(10px);
+    }
+    
     /* Spinner */
     .stSpinner > div {
         border-top-color: #667eea !important;
@@ -296,24 +304,47 @@ if 'media_result' not in st.session_state:
     st.session_state.media_result = None
 
 # -------------------------------------------------------
-# Sidebar API Keys
+# Sidebar API Keys (ONLY REQUIRED ONES)
 # -------------------------------------------------------
 with st.sidebar:
     st.markdown("<h2 style='color: white; margin-bottom: 20px;'>🔑 API Configuration</h2>", unsafe_allow_html=True)
     
-    st.markdown("<div style='color: #a78bfa; font-size: 13px; margin-bottom: 15px;'>Enter your API keys to enable AI models</div>", unsafe_allow_html=True)
+    st.markdown("<div style='color: #a78bfa; font-size: 13px; margin-bottom: 15px;'>Enter only the API keys you want to use</div>", unsafe_allow_html=True)
     
-    st.markdown("**LLM Models**")
-    openai_key = st.text_input("OpenAI API Key", type="password", key="openai_key")
-    anthropic_key = st.text_input("Claude API Key", type="password", key="anthropic_key")
-    google_key = st.text_input("Google Gemini API Key", type="password", key="google_key")
-    hf_key = st.text_input("HuggingFace API Key", type="password", key="hf_key")
+    # Only show Claude key prominently
+    st.markdown("**Required: Text Generation**")
+    claude_key = st.text_input("Claude API Key (Anthropic)", type="password", key="claude_key", help="Get your key from console.anthropic.com")
     
     st.markdown("---")
     
-    st.markdown("**Audio/Video Models**")
-    elevenlabs_key = st.text_input("ElevenLabs API Key", type="password", key="elevenlabs_key")
-    did_key = st.text_input("D-ID API Key", type="password", key="did_key")
+    # Optional keys in expander
+    with st.expander("🔧 Optional: Additional Models", expanded=False):
+        st.markdown("**Other LLM Models (Optional)**")
+        openai_key = st.text_input("OpenAI API Key", type="password", key="openai_key")
+        google_key = st.text_input("Google Gemini API Key", type="password", key="google_key")
+        hf_key = st.text_input("HuggingFace API Key", type="password", key="hf_key")
+    
+    st.markdown("---")
+    
+    st.markdown("**Audio/Video Generation**")
+    
+    # Default to OpenAI TTS as it's most common
+    tts_choice = st.radio(
+        "Choose your TTS provider:",
+        ["OpenAI TTS (Recommended)", "ElevenLabs", "D-ID Video"],
+        help="OpenAI TTS works with the same OpenAI key if you have one"
+    )
+    
+    if tts_choice == "OpenAI TTS (Recommended)":
+        if not openai_key:
+            openai_tts_key = st.text_input("OpenAI API Key (for TTS)", type="password", key="openai_tts_key")
+        else:
+            openai_tts_key = openai_key
+            st.success("✅ Using OpenAI key from above")
+    elif tts_choice == "ElevenLabs":
+        elevenlabs_key = st.text_input("ElevenLabs API Key", type="password", key="elevenlabs_key")
+    else:
+        did_key = st.text_input("D-ID API Key", type="password", key="did_key")
     
     st.markdown("---")
     
@@ -321,10 +352,8 @@ with st.sidebar:
     <div style='background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; margin-top: 20px;'>
         <div style='color: #fbbf24; font-weight: 600; margin-bottom: 8px;'>📚 Get API Keys:</div>
         <div style='font-size: 12px; color: #c7b3ff; line-height: 1.6;'>
-            • <a href='https://platform.openai.com' target='_blank' style='color: #a78bfa;'>OpenAI</a><br>
-            • <a href='https://console.anthropic.com' target='_blank' style='color: #a78bfa;'>Claude</a><br>
-            • <a href='https://makersuite.google.com' target='_blank' style='color: #a78bfa;'>Gemini</a><br>
-            • <a href='https://huggingface.co' target='_blank' style='color: #a78bfa;'>HuggingFace</a><br>
+            • <a href='https://console.anthropic.com' target='_blank' style='color: #a78bfa;'>Claude (Primary)</a><br>
+            • <a href='https://platform.openai.com' target='_blank' style='color: #a78bfa;'>OpenAI (Optional)</a><br>
             • <a href='https://elevenlabs.io' target='_blank' style='color: #a78bfa;'>ElevenLabs</a><br>
             • <a href='https://d-id.com' target='_blank' style='color: #a78bfa;'>D-ID</a>
         </div>
@@ -340,7 +369,7 @@ st.markdown("""
         <div class='header-icon'>🎙️</div>
         <div>
             <h1 class='main-title'>Multi-Model AI Agent</h1>
-            <p class='subtitle'>Generate & Enhance Text → Convert to Audio/Video with Multiple AI Models</p>
+            <p class='subtitle'>Powered by Claude AI → Convert to Audio/Video</p>
         </div>
     </div>
 </div>
@@ -361,15 +390,31 @@ with col1:
     </div>
     """, unsafe_allow_html=True)
     
+    # Determine available models based on API keys
+    available_models = []
+    if claude_key:
+        available_models.append("claude")
+    if openai_key:
+        available_models.append("openai")
+    if google_key:
+        available_models.append("gemini")
+    if hf_key:
+        available_models.append("huggingface")
+    
+    # Default to claude if available
+    if not available_models:
+        st.warning("⚠️ Please enter at least one LLM API key in the sidebar")
+        available_models = ["claude"]  # Show option even if no key
+    
     llm_model = st.selectbox(
         "Select LLM Model",
-        ["openai", "claude", "gemini", "huggingface"],
+        available_models,
         format_func=lambda x: {
+            "claude": "🔮 Claude 3.5 Sonnet (Recommended)",
             "openai": "🤖 OpenAI GPT-4",
-            "claude": "🔮 Claude 3.5 Sonnet",
             "gemini": "✨ Google Gemini",
-            "huggingface": "🤗 Llama-2 (HuggingFace)"
-        }[x]
+            "huggingface": "🤗 Llama-2"
+        }.get(x, x)
     )
     
     enhance_mode = st.selectbox(
@@ -396,15 +441,15 @@ with col2:
     </div>
     """, unsafe_allow_html=True)
     
-    tts_model = st.selectbox(
-        "Select Output Model",
-        ["openai-tts", "elevenlabs", "did"],
-        format_func=lambda x: {
-            "openai-tts": "🎵 OpenAI TTS",
-            "elevenlabs": "🔊 ElevenLabs",
-            "did": "🎥 D-ID Video"
-        }[x]
-    )
+    # Map radio choice to model name
+    tts_model_map = {
+        "OpenAI TTS (Recommended)": "openai-tts",
+        "ElevenLabs": "elevenlabs",
+        "D-ID Video": "did"
+    }
+    tts_model = tts_model_map[tts_choice]
+    
+    st.info(f"📌 Using: **{tts_choice}**")
     
     voices = {
         "openai-tts": ["alloy", "echo", "fable", "onyx", "nova", "shimmer"],
@@ -451,13 +496,36 @@ enhance_prompts = {
 }
 
 # -------------------------------------------------------
-# LLM Generation Function
+# LLM Generation Function (Only checks required key)
 # -------------------------------------------------------
 def generate_with_llm(text, model, keys, mode):
     prompt = f"{enhance_prompts[mode]}\n\nOriginal text:\n{text}"
     
-    if model == "openai":
-        if not keys["openai"]:
+    if model == "claude":
+        if not keys.get("claude"):
+            raise Exception("Claude API key required. Please add it in the sidebar.")
+        
+        r = requests.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "x-api-key": keys["claude"],
+                "anthropic-version": "2023-06-01",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": "claude-3-5-sonnet-20241022",
+                "max_tokens": 1024,
+                "messages": [{"role": "user", "content": prompt}]
+            }
+        )
+        
+        data = r.json()
+        if "error" in data:
+            raise Exception(f"Claude Error: {data['error'].get('message', 'Unknown error')}")
+        return data["content"][0]["text"]
+    
+    elif model == "openai":
+        if not keys.get("openai"):
             raise Exception("OpenAI API key required")
         
         r = requests.post(
@@ -478,34 +546,10 @@ def generate_with_llm(text, model, keys, mode):
         data = r.json()
         if "error" in data:
             raise Exception(f"OpenAI Error: {data['error']['message']}")
-        if "choices" not in data or len(data["choices"]) == 0:
-            raise Exception("OpenAI returned no output.")
         return data["choices"][0]["message"]["content"]
     
-    elif model == "claude":
-        if not keys["anthropic"]:
-            raise Exception("Claude API key required")
-        
-        r = requests.post(
-            "https://api.anthropic.com/v1/messages",
-            headers={
-                "x-api-key": keys["anthropic"],
-                "anthropic-version": "2023-06-01"
-            },
-            json={
-                "model": "claude-3-5-sonnet-20241022",
-                "max_tokens": 1024,
-                "messages": [{"role": "user", "content": prompt}]
-            }
-        )
-        
-        data = r.json()
-        if "error" in data:
-            raise Exception(data["error"]["message"])
-        return data["content"][0]["text"]
-    
     elif model == "gemini":
-        if not keys["google"]:
+        if not keys.get("google"):
             raise Exception("Gemini API key required")
         
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={keys['google']}"
@@ -513,11 +557,11 @@ def generate_with_llm(text, model, keys, mode):
         
         data = r.json()
         if "error" in data:
-            raise Exception(data["error"]["message"])
+            raise Exception(f"Gemini Error: {data['error']['message']}")
         return data["candidates"][0]["content"]["parts"][0]["text"]
     
     elif model == "huggingface":
-        if not keys["huggingface"]:
+        if not keys.get("huggingface"):
             raise Exception("HuggingFace key required")
         
         r = requests.post(
@@ -528,29 +572,34 @@ def generate_with_llm(text, model, keys, mode):
         
         data = r.json()
         if isinstance(data, dict) and "error" in data:
-            raise Exception(data["error"])
+            raise Exception(f"HuggingFace Error: {data['error']}")
         return data[0]["generated_text"]
 
 # -------------------------------------------------------
-# Media Generation Function
+# Media Generation Function (Only checks required key)
 # -------------------------------------------------------
 def generate_media(text, model, voice, keys):
     if model == "openai-tts":
-        if not keys["openai"]:
-            raise Exception("OpenAI API key required")
+        api_key = keys.get("openai") or keys.get("openai_tts")
+        if not api_key:
+            raise Exception("OpenAI API key required for TTS")
         
         r = requests.post(
             "https://api.openai.com/v1/audio/speech",
             headers={
-                "Authorization": f"Bearer {keys['openai']}",
+                "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json"
             },
             json={"model": "tts-1-hd", "voice": voice, "input": text}
         )
+        
+        if r.status_code != 200:
+            raise Exception(f"OpenAI TTS Error: {r.text}")
+        
         return {"type": "audio", "content": r.content}
     
     elif model == "elevenlabs":
-        if not keys["elevenlabs"]:
+        if not keys.get("elevenlabs"):
             raise Exception("ElevenLabs API key required")
         
         voices_map = {
@@ -567,10 +616,14 @@ def generate_media(text, model, voice, keys):
             headers={"xi-api-key": keys["elevenlabs"]},
             json={"text": text}
         )
+        
+        if r.status_code != 200:
+            raise Exception(f"ElevenLabs Error: {r.text}")
+        
         return {"type": "audio", "content": r.content}
     
     elif model == "did":
-        if not keys["did"]:
+        if not keys.get("did"):
             raise Exception("D-ID API key required")
         
         did_auth = base64.b64encode(f"{keys['did']}:".encode()).decode()
@@ -592,6 +645,9 @@ def generate_media(text, model, voice, keys):
             }
         )
         
+        if r.status_code != 201:
+            raise Exception(f"D-ID Error: {r.text}")
+        
         data = r.json()
         return {"type": "video", "url": data.get("result_url")}
 
@@ -604,14 +660,25 @@ if st.button("✨ Generate AI Content → Audio/Video"):
     if not input_text.strip():
         st.error("⚠️ Please enter some text first")
     else:
-        keys = {
-            "openai": openai_key,
-            "anthropic": anthropic_key,
-            "google": google_key,
-            "huggingface": hf_key,
-            "elevenlabs": elevenlabs_key,
-            "did": did_key
-        }
+        # Collect only provided API keys
+        keys = {}
+        if claude_key:
+            keys["claude"] = claude_key
+        if openai_key:
+            keys["openai"] = openai_key
+        if google_key:
+            keys["google"] = google_key
+        if hf_key:
+            keys["huggingface"] = hf_key
+        
+        # Add TTS keys
+        if tts_model == "openai-tts":
+            if 'openai_tts_key' in locals():
+                keys["openai_tts"] = openai_tts_key
+        elif tts_model == "elevenlabs" and 'elevenlabs_key' in locals():
+            keys["elevenlabs"] = elevenlabs_key
+        elif tts_model == "did" and 'did_key' in locals():
+            keys["did"] = did_key
         
         try:
             # Step 1: Generate Enhanced Text
@@ -682,9 +749,9 @@ if st.session_state.media_result:
 st.markdown("""
 <div class='footer'>
     <div style='font-weight: 600; font-size: 16px; margin-bottom: 8px;'>🚀 Multi-Model AI Agent</div>
-    <div>Built with ❤️ by Vivek YT • Powered by Multiple AI Models</div>
+    <div>Built with ❤️ by Vivek YT • Powered by Claude AI</div>
     <div style='margin-top: 12px; font-size: 12px; opacity: 0.7;'>
-        OpenAI • Claude • Gemini • HuggingFace • ElevenLabs • D-ID
+        Claude • OpenAI • Gemini • ElevenLabs • D-ID
     </div>
 </div>
 """, unsafe_allow_html=True)
