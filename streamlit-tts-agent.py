@@ -210,7 +210,6 @@ if st.button("✨ Generate with AI → Audio/Video ✨"):
     if not input_text.strip():
         st.error("Please enter text to convert")
     else:
-        # collect keys into dict
         api_keys = {
             'openai': openai_key,
             'anthropic': anthropic_key,
@@ -220,34 +219,45 @@ if st.button("✨ Generate with AI → Audio/Video ✨"):
             'did': did_key
         }
         try:
-            # Basic validation: only require the keys for selected models
-            # LLM selected
-            required_llm_key = 'google' if llm_model == 'gemini' else ('anthropic' if llm_model == 'claude' else llm_model)
-            if not api_keys.get(required_llm_key):
-                st.error(f"Missing API key for selected LLM: {required_llm_key}")
-            else:
-                with st.spinner('🧠 Generating/Enhancing text with AI...'):
-                    enhanced = generate_with_llm(input_text, llm_model, api_keys, enhance_mode)
-                    st.session_state['generated_text'] = enhanced
-                    st.success('✅ Text enhanced successfully!')
+            # Only validate API key for selected LLM
+            if llm_model == 'openai' and not api_keys['openai']:
+                raise Exception("OpenAI API key required for selected LLM")
+            if llm_model == 'claude' and not api_keys['anthropic']:
+                raise Exception("Claude API key required for selected LLM")
+            if llm_model == 'gemini' and not api_keys['google']:
+                raise Exception("Google Gemini API key required for selected LLM")
+            if llm_model == 'huggingface' and not api_keys['huggingface']:
+                raise Exception("Hugging Face API key required for selected LLM")
 
-                with st.spinner('🎙️ Converting text to audio/video...'):
-                    media = generate_audio_video(enhanced, tts_model, voice, api_keys)
-                    # show results
-                    if media['type'] == 'audio':
-                        st.session_state['media_type'] = 'audio'
-                        st.audio(media['content'])
-                        st.download_button('⬇️ Download Audio', data=media['content'], file_name='generated_audio.mp3', mime='audio/mpeg')
+            with st.spinner('🧠 Generating/Enhancing text with AI...'):
+                enhanced = generate_with_llm(input_text, llm_model, api_keys, enhance_mode)
+                st.session_state['generated_text'] = enhanced
+                st.success('✅ Text enhanced successfully!')
+
+            # Only validate API key for selected TTS/Video model
+            if tts_model == 'openai-tts' and not api_keys['openai']:
+                raise Exception("OpenAI API key required for TTS")
+            if tts_model == 'elevenlabs' and not api_keys['elevenlabs']:
+                raise Exception("ElevenLabs API key required for TTS")
+            if tts_model == 'did' and not api_keys['did']:
+                raise Exception("D-ID API key required for Video generation")
+
+            with st.spinner('🎙️ Converting text to audio/video...'):
+                media = generate_audio_video(enhanced, tts_model, voice, api_keys)
+                if media['type'] == 'audio':
+                    st.session_state['media_type'] = 'audio'
+                    st.audio(media['content'])
+                    st.download_button('⬇️ Download Audio', data=media['content'], file_name='generated_audio.mp3', mime='audio/mpeg')
+                else:
+                    st.session_state['media_type'] = 'video'
+                    if media.get('url') and isinstance(media.get('url'), str) and media.get('url').startswith('http'):
+                        st.video(media.get('url'))
+                        st.markdown(f"[Download Video]({media.get('url')})")
                     else:
-                        st.session_state['media_type'] = 'video'
-                        # if URL provided show video
-                        if media.get('url') and isinstance(media.get('url'), str) and media.get('url').startswith('http'):
-                            st.video(media.get('url'))
-                            st.markdown(f"[Download Video]({media.get('url')})")
-                        else:
-                            st.write('Video generation response:', media)
+                        st.write('Video generation response:', media)
 
         except Exception as e:
+            st.error(f"❌ Error: {str(e)}")
             st.error(f"❌ Error: {str(e)}")
 
 # --- Display generated text if present ---
