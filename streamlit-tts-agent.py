@@ -4,39 +4,38 @@ import json
 import base64
 from io import BytesIO
 
-# ------------------------------------------
-# Streamlit App — Pixel-Perfect React Layout
-# ------------------------------------------
-
+# -------------------------------------------------------
+# Streamlit UI Setup
+# -------------------------------------------------------
 st.set_page_config(page_title="Multi-Model AI Agent", page_icon="🎙️", layout="wide")
 
-# ------------------------------
-# Custom Tailwind-like CSS
-# ------------------------------
+# -------------------------------------------------------
+# Custom CSS
+# -------------------------------------------------------
 st.markdown("""
 <style>
 body {
     background: linear-gradient(135deg, #081329 0%, #2b0b29 100%);
 }
 
-/* ----- Main Card ----- */
+/* Main card */
 .main-card {
-    background: linear-gradient(90deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));
-    border: 1px solid rgba(255,255,255,0.08);
-    padding: 30px;
+    background: rgba(255,255,255,0.04);
+    padding: 32px;
     border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.08);
 }
 
-/* ----- Cards ----- */
+/* Sub cards */
 .card {
-    background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    background: rgba(255,255,255,0.03);
     padding: 22px;
     border-radius: 14px;
     border: 1px solid rgba(255,255,255,0.05);
-    margin-bottom: 10px;
+    margin-bottom: 12px;
 }
 
-/* Section titles */
+/* Section headers */
 .section-title {
     color: #fff;
     margin: 0 0 14px 0;
@@ -51,7 +50,7 @@ textarea, input, select {
     border: 1px solid rgba(255,255,255,0.06) !important;
 }
 
-/* Button */
+/* Buttons */
 button[kind="primary"] {
     background: linear-gradient(90deg,#4f46e5,#9333ea,#ec4899) !important;
     border-radius: 12px !important;
@@ -67,230 +66,246 @@ button[kind="primary"] {
 </style>
 """, unsafe_allow_html=True)
 
-# ------------------------------
-# Sidebar API Keys
-# ------------------------------
 
+# -------------------------------------------------------
+# Sidebar API Keys
+# -------------------------------------------------------
 with st.sidebar:
-    st.header("🔑 API Configuration")
+    st.header("🔑 API Keys")
 
     openai_key = st.text_input("OpenAI API Key", type="password")
-    anthropic_key = st.text_input("Anthropic (Claude) API Key", type="password")
-    google_key = st.text_input("Google (Gemini) API Key", type="password")
-    hf_key = st.text_input("Hugging Face API Key", type="password")
+    anthropic_key = st.text_input("Claude API Key", type="password")
+    google_key = st.text_input("Google Gemini API Key", type="password")
+    hf_key = st.text_input("HuggingFace API Key", type="password")
 
     st.markdown("---")
 
     elevenlabs_key = st.text_input("ElevenLabs API Key", type="password")
     did_key = st.text_input("D-ID API Key", type="password")
 
-# ------------------------------
-# Page Header
-# ------------------------------
 
+# -------------------------------------------------------
+# Header
+# -------------------------------------------------------
 st.markdown("""
-<div style='display:flex;align-items:center;gap:16px;margin-bottom:18px'>
-    <div style='width:56px;height:56px;background:linear-gradient(135deg,#c7b3ff,#ffd1f0);border-radius:12px;display:flex;align-items:center;justify-content:center'>
-        🎙️
-    </div>
+<div style='display:flex;align-items:center;gap:16px;margin-bottom:20px'>
+    <div style='width:56px;height:56px;background:linear-gradient(135deg,#c7b3ff,#ffd1f0);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:32px;'>🎙️</div>
     <div>
         <h1 style='color:white;margin:0;font-size:36px;'>Multi-Model AI Agent</h1>
-        <div style='color:#ddd'>Generate & enhance text with AI → Convert to audio or video</div>
+        <div style='color:#ccc'>Generate → Enhance → Convert to Audio/Video</div>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
+
+# Wrap main content
 st.markdown("<div class='main-card'>", unsafe_allow_html=True)
 
-# ------------------------------
-# 2-column layout like React
-# ------------------------------
+
+# -------------------------------------------------------
+# Two-column React-like layout
+# -------------------------------------------------------
 col1, col2 = st.columns([1,1])
 
 with col1:
-    st.markdown("<div class='card'><h3 class='section-title'>Step 1: AI Text Generation</h3>", unsafe_allow_html=True)
+    st.markdown("<div class='card'><h3 class='section-title'>Step 1: Text Generation</h3>", unsafe_allow_html=True)
 
     llm_model = st.selectbox(
-        "Select LLM Model",
+        "Select LLM",
         ["openai", "claude", "gemini", "huggingface"],
         format_func=lambda x: {
             "openai": "OpenAI GPT-4",
-            "claude": "Claude (Anthropic)",
+            "claude": "Claude 3.5 Sonnet",
             "gemini": "Google Gemini",
-            "huggingface": "Hugging Face (Llama 2)"
-        }[x],
+            "huggingface": "Llama-2 (HuggingFace)"
+        }[x]
     )
 
     enhance_mode = st.selectbox(
-        "Enhancement Mode",
-        ["improve", "script", "narration", "podcast", "story", "professional", "casual"],
-        format_func=lambda x: {
-            "improve": "Improve and enhance",
-            "script": "Convert to video script",
-            "narration": "Convert to narration style",
-            "podcast": "Convert to podcast intro/outro",
-            "story": "Expand into a story",
-            "professional": "Make professional",
-            "casual": "Make friendly & casual",
-        }[x],
+        "Enhancement Type",
+        ["improve", "script", "narration", "podcast", "story", "professional", "casual"]
     )
+
     st.markdown("</div>", unsafe_allow_html=True)
 
+
 with col2:
-    st.markdown("<div class='card'><h3 class='section-title'>Step 2: Audio / Video Generation</h3>", unsafe_allow_html=True)
+    st.markdown("<div class='card'><h3 class='section-title'>Step 2: Audio / Video</h3>", unsafe_allow_html=True)
 
     tts_model = st.selectbox(
-        "Select TTS/Video Model",
+        "Target Output",
         ["openai-tts", "elevenlabs", "did"],
         format_func=lambda x: {
             "openai-tts": "OpenAI TTS",
             "elevenlabs": "ElevenLabs",
-            "did": "D-ID (Video)",
-        }[x],
+            "did": "D-ID Video"
+        }[x]
     )
 
     voices = {
         "openai-tts": ["alloy", "echo", "fable", "onyx", "nova", "shimmer"],
         "elevenlabs": ["Rachel", "Drew", "Clyde", "Paul", "Domi", "Dave"],
-        "did": ["en-US-JennyNeural", "en-US-GuyNeural", "en-GB-SoniaNeural"],
+        "did": ["en-US-JennyNeural", "en-US-GuyNeural"]
     }
 
-    voice = st.selectbox("Select Voice", voices[tts_model])
+    voice = st.selectbox("Voice", voices[tts_model])
+
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 st.divider()
 
-# ------------------------------
-# Text Input
-# ------------------------------
 
-input_text = st.text_area(
-    "Enter your text (will be enhanced)",
-    height=150,
-)
-
+# -------------------------------------------------------
+# Input text
+# -------------------------------------------------------
+input_text = st.text_area("Enter your text", height=150)
 st.caption(f"{len(input_text)} characters")
 
 
-# ------------------------------
-# PROMPTS
-# ------------------------------
+# -------------------------------------------------------
+# Prompts mapped
+# -------------------------------------------------------
 enhance_prompts = {
-    "improve": "Improve and enhance the text",
-    "script": "Convert to video script format",
-    "narration": "Convert to narration style",
-    "podcast": "Convert to podcast intro/outro",
-    "story": "Expand into a story",
-    "professional": "Make more professional",
-    "casual": "Make friendly and conversational",
+    "improve": "Improve writing and clarity.",
+    "script": "Convert this into a video script.",
+    "narration": "Rewrite in narrative storytelling style.",
+    "podcast": "Rewrite as a podcast intro.",
+    "story": "Expand into a fictional story.",
+    "professional": "Rewrite formally and professionally.",
+    "casual": "Rewrite casually and friendly."
 }
 
-# ------------------------------
-# LLM GENERATION
-# ------------------------------
 
+
+# -------------------------------------------------------
+# LLM PROCESSING FUNCTION (fixed for KeyError)
+# -------------------------------------------------------
 def generate_with_llm(text, model, keys, mode):
-    prompt = f"{enhance_prompts[mode]}. Original text: \"{text}\". Provide only the final output."
 
-    
-    # --- OpenAI ---
-  if model == "openai":
-       if not keys["openai"]:
-            raise Exception("Missing OpenAI API key")
+    prompt = f"{enhance_prompts[mode]}\n\nOriginal text:\n{text}"
 
-         r = requests.post(
+    # -------------------- OPENAI --------------------
+    if model == "openai":
+        if not keys["openai"]:
+            raise Exception("OpenAI API key required")
+
+        r = requests.post(
             "https://api.openai.com/v1/chat/completions",
-              headers={
-               "Authorization": f"Bearer {keys['openai']}",
-              "Content-Type": "application/json",
-         },
-        json={
-            "model": "gpt-4o-mini",   # safer + cheaper + reliable
-            "messages": [
-                {"role": "system", "content": "Text enhancement assistant"},
-                {"role": "user", "content": prompt},
-            ],
-        },
-    )
+            headers={
+                "Authorization": f"Bearer {keys['openai']}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": "gpt-4o-mini",
+                "messages": [
+                    {"role": "system", "content": "You are a text enhancement AI."},
+                    {"role": "user", "content": prompt},
+                ],
+            },
+        )
 
-    data = r.json()
+        data = r.json()
 
-    # Error from API
-    if "error" in data:
-        msg = data["error"].get("message", "Unknown OpenAI error")
-        raise Exception(f"OpenAI Error: {msg}")
+        if "error" in data:
+            raise Exception(f"OpenAI Error: {data['error']['message']}")
 
-    # Missing or bad structure
-    if "choices" not in data or len(data["choices"]) == 0:
-        raise Exception("OpenAI returned no output. Check your API key or usage.")
+        if "choices" not in data or len(data["choices"]) == 0:
+            raise Exception("OpenAI returned no output.")
 
-    return data["choices"][0]["message"]["content"]
+        return data["choices"][0]["message"]["content"]
 
 
-    # --- Claude ---
+    # -------------------- CLAUDE --------------------
     if model == "claude":
         if not keys["anthropic"]:
-            raise Exception("Missing Claude API key")
+            raise Exception("Claude API key required")
 
         r = requests.post(
             "https://api.anthropic.com/v1/messages",
             headers={
                 "x-api-key": keys["anthropic"],
-                "anthropic-version": "2023-06-01",
+                "anthropic-version": "2023-06-01"
             },
             json={
                 "model": "claude-3-5-sonnet-20241022",
-                "messages": [{"role": "user", "content": prompt}],
-            },
+                "messages": [{"role": "user", "content": prompt}]
+            }
         )
-        return r.json()["content"][0]["text"]
 
-    # --- Gemini ---
+        data = r.json()
+        if "error" in data:
+            raise Exception(data["error"]["message"])
+
+        return data["content"][0]["text"]
+
+
+    # -------------------- GEMINI --------------------
     if model == "gemini":
         if not keys["google"]:
-            raise Exception("Missing Google Gemini API key")
+            raise Exception("Gemini API key required")
 
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={keys['google']}"
-        r = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]})
-        return r.json()["candidates"][0]["content"]["parts"][0]["text"]
 
-    # --- HuggingFace ---
+        r = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]})
+
+        data = r.json()
+
+        if "error" in data:
+            raise Exception(data["error"]["message"])
+
+        return data["candidates"][0]["content"]["parts"][0]["text"]
+
+
+    # -------------------- HUGGINGFACE --------------------
     if model == "huggingface":
         if not keys["huggingface"]:
-            raise Exception("Missing HuggingFace API key")
+            raise Exception("HuggingFace key required")
 
         r = requests.post(
             "https://api-inference.huggingface.co/models/meta-llama/Llama-2-70b-chat-hf",
             headers={"Authorization": f"Bearer {keys['huggingface']}"},
             json={"inputs": prompt},
         )
-        return r.json()[0]["generated_text"]
 
-# ------------------------------
-# TTS / VIDEO
-# ------------------------------
+        data = r.json()
 
+        if isinstance(data, dict) and "error" in data:
+            raise Exception(data["error"])
+
+        return data[0]["generated_text"]
+
+
+
+# -------------------------------------------------------
+# TTS + VIDEO FUNCTION
+# -------------------------------------------------------
 def generate_media(text, model, voice, keys):
 
-    # --- OpenAI TTS ---
+    # -------------------------------------------------------
+    # OpenAI TTS
+    # -------------------------------------------------------
     if model == "openai-tts":
         if not keys["openai"]:
-            raise Exception("Missing OpenAI API key")
+            raise Exception("OpenAI API key required")
 
         r = requests.post(
             "https://api.openai.com/v1/audio/speech",
             headers={
                 "Authorization": f"Bearer {keys['openai']}",
-                "Content-Type": "application/json",
+                "Content-Type": "application/json"
             },
-            json={"model": "tts-1-hd", "input": text, "voice": voice},
+            json={"model": "tts-1-hd", "voice": voice, "input": text}
         )
+
         return {"type": "audio", "content": r.content}
 
-    # --- ElevenLabs ---
+    # -------------------------------------------------------
+    # ElevenLabs
+    # -------------------------------------------------------
     if model == "elevenlabs":
         if not keys["elevenlabs"]:
-            raise Exception("Missing ElevenLabs API key")
+            raise Exception("ElevenLabs API key required")
 
         voices_map = {
             "Rachel": "21m00Tcm4TlvDq8ikWAM",
@@ -301,19 +316,20 @@ def generate_media(text, model, voice, keys):
             "Dave": "CYw3kZ02Hs0563khs1Fj",
         }
 
-        v = voices_map[voice]
-
         r = requests.post(
-            f"https://api.elevenlabs.io/v1/text-to-speech/{v}",
+            f"https://api.elevenlabs.io/v1/text-to-speech/{voices_map[voice]}",
             headers={"xi-api-key": keys["elevenlabs"]},
-            json={"text": text},
+            json={"text": text}
         )
+
         return {"type": "audio", "content": r.content}
 
-    # --- D-ID VIDEO ---
+    # -------------------------------------------------------
+    # D-ID VIDEO
+    # -------------------------------------------------------
     if model == "did":
         if not keys["did"]:
-            raise Exception("Missing D-ID API key")
+            raise Exception("D-ID API key required")
 
         did_auth = base64.b64encode(f"{keys['did']}:".encode()).decode()
 
@@ -321,28 +337,32 @@ def generate_media(text, model, voice, keys):
             "https://api.d-id.com/talks",
             headers={
                 "Authorization": f"Basic {did_auth}",
-                "Content-Type": "application/json",
+                "Content-Type": "application/json"
             },
             json={
                 "script": {
                     "type": "text",
                     "input": text,
                     "voice_id": voice,
-                    "provider": {"type": "microsoft"},
+                    "provider": {"type": "microsoft"}
                 },
-                "source_url": "https://create-images-results.d-id.com/default-presenter.jpg",
-            },
+                "source_url": "https://create-images-results.d-id.com/default-presenter.jpg"
+            }
         )
 
-        return {"type": "video", "url": r.json().get("result_url")}
+        data = r.json()
 
-# ------------------------------
-# Generate Button
-# ------------------------------
+        return {"type": "video", "url": data.get("result_url")}
 
-if st.button("✨ Generate with AI → Audio/Video ✨"):
+
+
+# -------------------------------------------------------
+# MAIN BUTTON
+# -------------------------------------------------------
+if st.button("✨ Generate → Audio / Video"):
+
     if not input_text.strip():
-        st.error("Please enter some text")
+        st.error("Enter some text first")
     else:
         keys = {
             "openai": openai_key,
@@ -350,38 +370,37 @@ if st.button("✨ Generate with AI → Audio/Video ✨"):
             "google": google_key,
             "huggingface": hf_key,
             "elevenlabs": elevenlabs_key,
-            "did": did_key,
+            "did": did_key
         }
 
-        # --- LLM ---
-        with st.spinner("🧠 Enhancing text with AI..."):
+        # LLM Generation
+        with st.spinner("🧠 Generating text..."):
             enhanced = generate_with_llm(input_text, llm_model, keys, enhance_mode)
-            st.success("Text enhanced!")
 
-        # --- TTS/Video ---
-        with st.spinner("🎙️ Converting to audio/video..."):
+        st.success("Text enhanced!")
+
+        # Audio / Video Output
+        with st.spinner("🎙️ Converting..."):
             media = generate_media(enhanced, tts_model, voice, keys)
 
-        # AUDIO
+        # Audio output
         if media["type"] == "audio":
             st.audio(media["content"])
             st.download_button("⬇️ Download Audio", media["content"], "audio.mp3")
 
-        # VIDEO
+        # Video output
         if media["type"] == "video":
             if media["url"]:
                 st.video(media["url"])
                 st.markdown(f"[Download Video]({media['url']})")
             else:
-                st.write(media)
+                st.error("D-ID returned no video URL.")
 
-# ------------------------------
-# Show Enhanced Text
-# ------------------------------
 
+# Show enhanced text
 if "enhanced" in locals():
     st.divider()
-    st.subheader("🧠 AI Enhanced Text")
+    st.subheader("🧠 Enhanced Text")
     st.text_area("", enhanced, height=160)
 
-st.markdown("<div class='footer'>Pixel-perfect UI recreated in Streamlit</div>", unsafe_allow_html=True)
+st.markdown("<div class='footer'>Built by Vivek YT • Multi-Model AI Agent</div>", unsafe_allow_html=True)
