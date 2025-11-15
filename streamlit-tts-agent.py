@@ -192,26 +192,40 @@ enhance_prompts = {
 def generate_with_llm(text, model, keys, mode):
     prompt = f"{enhance_prompts[mode]}. Original text: \"{text}\". Provide only the final output."
 
+    
     # --- OpenAI ---
-    if model == "openai":
-        if not keys["openai"]:
-            raise Exception("Missing OpenAI API key")
+if model == "openai":
+    if not keys["openai"]:
+        raise Exception("Missing OpenAI API key")
 
-        r = requests.post(
-            "https://api.openai.com/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {keys['openai']}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": "gpt-4",
-                "messages": [
-                    {"role": "system", "content": "Text enhancement assistant"},
-                    {"role": "user", "content": prompt},
-                ],
-            },
-        )
-        return r.json()["choices"][0]["message"]["content"]
+    r = requests.post(
+        "https://api.openai.com/v1/chat/completions",
+        headers={
+            "Authorization": f"Bearer {keys['openai']}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "model": "gpt-4o-mini",   # safer + cheaper + reliable
+            "messages": [
+                {"role": "system", "content": "Text enhancement assistant"},
+                {"role": "user", "content": prompt},
+            ],
+        },
+    )
+
+    data = r.json()
+
+    # Error from API
+    if "error" in data:
+        msg = data["error"].get("message", "Unknown OpenAI error")
+        raise Exception(f"OpenAI Error: {msg}")
+
+    # Missing or bad structure
+    if "choices" not in data or len(data["choices"]) == 0:
+        raise Exception("OpenAI returned no output. Check your API key or usage.")
+
+    return data["choices"][0]["message"]["content"]
+
 
     # --- Claude ---
     if model == "claude":
