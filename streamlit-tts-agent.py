@@ -194,16 +194,16 @@ def generate_with_llm(text, model, keys, mode):
 
     
     # --- OpenAI ---
-if model == "openai":
-    if not keys["openai"]:
-        raise Exception("Missing OpenAI API key")
+  if model == "openai":
+       if not keys["openai"]:
+            raise Exception("Missing OpenAI API key")
 
-    r = requests.post(
-        "https://api.openai.com/v1/chat/completions",
-        headers={
-            "Authorization": f"Bearer {keys['openai']}",
-            "Content-Type": "application/json",
-        },
+         r = requests.post(
+            "https://api.openai.com/v1/chat/completions",
+              headers={
+               "Authorization": f"Bearer {keys['openai']}",
+              "Content-Type": "application/json",
+         },
         json={
             "model": "gpt-4o-mini",   # safer + cheaper + reliable
             "messages": [
