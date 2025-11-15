@@ -1,2 +1,43 @@
 streamlit>=1.28.0
-requests>=2.31.0
+   requests>=2.31.0
+```
+   - Commit the file
+
+4. **Create `app.py` at root:**
+   - Click "Add file" → "Create new file"
+   - Name it: `app.py`
+   - Paste the full Streamlit code from the artifact
+   - Commit the file
+
+5. **Update Streamlit Cloud settings:**
+   - Go to https://streamlit.io/cloud
+   - Find your app
+   - Click "Settings" → "General"
+   - Set "Main file path" to: `app.py`
+   - Save and reboot the app
+
+---
+
+## **Your Final Repository Structure Should Be:**
+```
+multi_model_ai_agent/
+│
+├── app.py              ← Main Streamlit application
+├── requirements.txt    ← Just these 2 lines:
+│                          streamlit>=1.28.0
+│                          requests>=2.31.0
+└── README.md          ← Optional
+```
+
+---
+
+## **Alternative: If You Want to Keep Folders**
+
+If you want to organize your code in folders:
+```
+multi_model_ai_agent/
+│
+├── requirements.txt           ← At ROOT!
+├── app.py                     ← At ROOT!
+└── assets/                    ← Other stuff can be in folders
+    └── docs.md
