@@ -304,58 +304,219 @@ if 'media_result' not in st.session_state:
     st.session_state.media_result = None
 
 # -------------------------------------------------------
-# Sidebar API Keys (ONLY REQUIRED ONES)
+# Sidebar API Keys - Enhanced Design
 # -------------------------------------------------------
 with st.sidebar:
-    st.markdown("<h2 style='color: white; margin-bottom: 20px;'>🔑 API Configuration</h2>", unsafe_allow_html=True)
+    # Sidebar Header
+    st.markdown("""
+    <div style='text-align: center; padding: 20px 0 30px 0; border-bottom: 1px solid rgba(255,255,255,0.1);'>
+        <div style='font-size: 40px; margin-bottom: 10px;'>🔑</div>
+        <h2 style='color: white; margin: 0; font-size: 24px; font-weight: 700;'>API Configuration</h2>
+        <p style='color: #a78bfa; font-size: 12px; margin-top: 8px;'>Enter only the keys you need</p>
+    </div>
+    """, unsafe_allow_html=True)
     
-    st.markdown("<div style='color: #a78bfa; font-size: 13px; margin-bottom: 15px;'>Enter only the API keys you want to use</div>", unsafe_allow_html=True)
+    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
     
-    # Only show Claude key prominently
-    st.markdown("**Required: Text Generation**")
-    claude_key = st.text_input("Claude API Key (Anthropic)", type="password", key="claude_key", help="Get your key from console.anthropic.com")
+    # Required Section - Claude
+    st.markdown("""
+    <div style='background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(168, 85, 247, 0.15)); 
+                padding: 16px; border-radius: 12px; border: 1px solid rgba(139, 92, 246, 0.3); margin-bottom: 20px;'>
+        <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 12px;'>
+            <span style='font-size: 20px;'>⚡</span>
+            <span style='color: white; font-weight: 600; font-size: 15px;'>Required: Text Generation</span>
+        </div>
+        <div style='color: #c7b3ff; font-size: 11px; line-height: 1.5;'>
+            Enter your Claude API key to enable AI text generation
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
     
-    st.markdown("---")
-    
-    # Optional keys in expander
-    with st.expander("🔧 Optional: Additional Models", expanded=False):
-        st.markdown("**Other LLM Models (Optional)**")
-        openai_key = st.text_input("OpenAI API Key", type="password", key="openai_key")
-        google_key = st.text_input("Google Gemini API Key", type="password", key="google_key")
-        hf_key = st.text_input("HuggingFace API Key", type="password", key="hf_key")
-    
-    st.markdown("---")
-    
-    st.markdown("**Audio/Video Generation**")
-    
-    # Default to OpenAI TTS as it's most common
-    tts_choice = st.radio(
-        "Choose your TTS provider:",
-        ["OpenAI TTS (Recommended)", "ElevenLabs", "D-ID Video"],
-        help="OpenAI TTS works with the same OpenAI key if you have one"
+    claude_key = st.text_input(
+        "Claude API Key (Anthropic)",
+        type="password",
+        key="claude_key",
+        placeholder="sk-ant-api03-...",
+        help="Get your key from console.anthropic.com"
     )
     
-    if tts_choice == "OpenAI TTS (Recommended)":
-        if not openai_key:
-            openai_tts_key = st.text_input("OpenAI API Key (for TTS)", type="password", key="openai_tts_key")
-        else:
-            openai_tts_key = openai_key
-            st.success("✅ Using OpenAI key from above")
-    elif tts_choice == "ElevenLabs":
-        elevenlabs_key = st.text_input("ElevenLabs API Key", type="password", key="elevenlabs_key")
-    else:
-        did_key = st.text_input("D-ID API Key", type="password", key="did_key")
+    if claude_key:
+        st.markdown("""
+        <div style='background: rgba(16, 185, 129, 0.15); padding: 10px; border-radius: 8px; 
+                    border-left: 3px solid #10b981; margin-top: 8px;'>
+            <div style='color: #6ee7b7; font-size: 12px; display: flex; align-items: center; gap: 6px;'>
+                <span>✓</span> Claude API key configured
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
     
-    st.markdown("---")
+    st.markdown("<div style='height: 25px;'></div>", unsafe_allow_html=True)
     
+    # Optional Models Expander
+    with st.expander("🔧 Optional: Additional LLM Models", expanded=False):
+        st.markdown("""
+        <div style='color: #a78bfa; font-size: 11px; margin-bottom: 15px; line-height: 1.5;'>
+            Add more AI models for variety. These are completely optional.
+        </div>
+        """, unsafe_allow_html=True)
+        
+        openai_key = st.text_input(
+            "OpenAI GPT-4",
+            type="password",
+            key="openai_key",
+            placeholder="sk-...",
+            help="For GPT-4 text generation"
+        )
+        
+        google_key = st.text_input(
+            "Google Gemini",
+            type="password",
+            key="google_key",
+            placeholder="AIza...",
+            help="For Gemini text generation"
+        )
+        
+        hf_key = st.text_input(
+            "HuggingFace",
+            type="password",
+            key="hf_key",
+            placeholder="hf_...",
+            help="For Llama-2 text generation"
+        )
+    
+    st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='border-top: 1px solid rgba(255,255,255,0.1); margin: 20px 0;'></div>", unsafe_allow_html=True)
+    
+    # Audio/Video Section
     st.markdown("""
-    <div style='background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; margin-top: 20px;'>
-        <div style='color: #fbbf24; font-weight: 600; margin-bottom: 8px;'>📚 Get API Keys:</div>
-        <div style='font-size: 12px; color: #c7b3ff; line-height: 1.6;'>
-            • <a href='https://console.anthropic.com' target='_blank' style='color: #a78bfa;'>Claude (Primary)</a><br>
-            • <a href='https://platform.openai.com' target='_blank' style='color: #a78bfa;'>OpenAI (Optional)</a><br>
-            • <a href='https://elevenlabs.io' target='_blank' style='color: #a78bfa;'>ElevenLabs</a><br>
-            • <a href='https://d-id.com' target='_blank' style='color: #a78bfa;'>D-ID</a>
+    <div style='background: linear-gradient(135deg, rgba(236, 72, 153, 0.15), rgba(239, 68, 68, 0.15)); 
+                padding: 16px; border-radius: 12px; border: 1px solid rgba(236, 72, 153, 0.3); margin-bottom: 20px;'>
+        <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 12px;'>
+            <span style='font-size: 20px;'>🎵</span>
+            <span style='color: white; font-weight: 600; font-size: 15px;'>Audio/Video Generation</span>
+        </div>
+        <div style='color: #fbbf24; font-size: 11px; line-height: 1.5;'>
+            Choose your preferred TTS provider
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # TTS Provider Selection with custom styling
+    tts_choice = st.radio(
+        "Select Provider:",
+        ["OpenAI TTS (Recommended)", "ElevenLabs", "D-ID Video"],
+        help="Choose the service for converting text to audio/video",
+        label_visibility="visible"
+    )
+    
+    st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
+    
+    # Show appropriate key input based on selection
+    if tts_choice == "OpenAI TTS (Recommended)":
+        if openai_key:
+            openai_tts_key = openai_key
+            st.markdown("""
+            <div style='background: rgba(16, 185, 129, 0.15); padding: 12px; border-radius: 8px; 
+                        border-left: 3px solid #10b981; margin-bottom: 15px;'>
+                <div style='color: #6ee7b7; font-size: 12px; display: flex; align-items: center; gap: 6px;'>
+                    <span>✓</span> Reusing OpenAI key from above
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown("""
+            <div style='background: rgba(59, 130, 246, 0.1); padding: 10px; border-radius: 8px; 
+                        margin-bottom: 12px; border-left: 3px solid #3b82f6;'>
+                <div style='color: #93c5fd; font-size: 11px;'>
+                    ℹ️ Need OpenAI key for TTS
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            openai_tts_key = st.text_input(
+                "OpenAI API Key",
+                type="password",
+                key="openai_tts_key",
+                placeholder="sk-...",
+                help="Same as OpenAI GPT-4 key"
+            )
+    
+    elif tts_choice == "ElevenLabs":
+        st.markdown("""
+        <div style='background: rgba(59, 130, 246, 0.1); padding: 10px; border-radius: 8px; 
+                    margin-bottom: 12px; border-left: 3px solid #3b82f6;'>
+            <div style='color: #93c5fd; font-size: 11px;'>
+                ℹ️ Professional voice synthesis
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        elevenlabs_key = st.text_input(
+            "ElevenLabs API Key",
+            type="password",
+            key="elevenlabs_key",
+            placeholder="Enter your ElevenLabs key",
+            help="Get from elevenlabs.io"
+        )
+    
+    else:  # D-ID Video
+        st.markdown("""
+        <div style='background: rgba(59, 130, 246, 0.1); padding: 10px; border-radius: 8px; 
+                    margin-bottom: 12px; border-left: 3px solid #3b82f6;'>
+            <div style='color: #93c5fd; font-size: 11px;'>
+                ℹ️ AI avatar video generation
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        did_key = st.text_input(
+            "D-ID API Key",
+            type="password",
+            key="did_key",
+            placeholder="Enter your D-ID key",
+            help="Get from d-id.com"
+        )
+    
+    # Help Section
+    st.markdown("<div style='height: 30px;'></div>", unsafe_allow_html=True)
+    
+    with st.expander("📚 How to Get API Keys", expanded=False):
+        st.markdown("""
+        <div style='font-size: 12px; color: #c7b3ff; line-height: 1.8;'>
+            <div style='margin-bottom: 12px;'>
+                <div style='color: #8b5cf6; font-weight: 600; margin-bottom: 6px;'>🔮 Claude (Primary)</div>
+                1. Visit <a href='https://console.anthropic.com' target='_blank' style='color: #a78bfa;'>console.anthropic.com</a><br>
+                2. Sign up / Log in<br>
+                3. Go to API Keys section<br>
+                4. Create new key
+            </div>
+            
+            <div style='margin-bottom: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);'>
+                <div style='color: #10b981; font-weight: 600; margin-bottom: 6px;'>🤖 OpenAI</div>
+                Visit <a href='https://platform.openai.com/api-keys' target='_blank' style='color: #a78bfa;'>platform.openai.com</a>
+            </div>
+            
+            <div style='margin-bottom: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);'>
+                <div style='color: #f59e0b; font-weight: 600; margin-bottom: 6px;'>✨ Gemini</div>
+                Visit <a href='https://makersuite.google.com/app/apikey' target='_blank' style='color: #a78bfa;'>makersuite.google.com</a>
+            </div>
+            
+            <div style='margin-bottom: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);'>
+                <div style='color: #ec4899; font-weight: 600; margin-bottom: 6px;'>🔊 ElevenLabs</div>
+                Visit <a href='https://elevenlabs.io' target='_blank' style='color: #a78bfa;'>elevenlabs.io</a>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Stats/Info at bottom
+    st.markdown("""
+    <div style='margin-top: 30px; padding: 15px; background: rgba(255,255,255,0.03); 
+                border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);'>
+        <div style='color: #6ee7b7; font-size: 11px; font-weight: 600; margin-bottom: 8px;'>
+            💡 Quick Tips
+        </div>
+        <div style='color: #a78bfa; font-size: 10px; line-height: 1.6;'>
+            • Keys are stored in browser only<br>
+            • Start with Claude + OpenAI TTS<br>
+            • Add more models as needed<br>
+            • All data is secure & private
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -749,3 +910,9 @@ if st.session_state.media_result:
 st.markdown("""
 <div class='footer'>
     <div style='font-weight: 600; font-size: 16px; margin-bottom: 8px;'>🚀 Multi-Model AI Agent</div>
+    <div>Built with ❤️ by Vivek YT • Powered by Claude AI</div>
+    <div style='margin-top: 12px; font-size: 12px; opacity: 0.7;'>
+        Claude • OpenAI • Gemini • ElevenLabs • D-ID
+    </div>
+</div>
+""", unsafe_allow_html=True)
