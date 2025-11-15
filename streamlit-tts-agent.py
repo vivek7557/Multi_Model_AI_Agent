@@ -4,308 +4,213 @@ import json
 import base64
 from io import BytesIO
 
-# Page config
-st.set_page_config(
-    page_title="Multi-Model AI Agent",
-    page_icon="🎙️",
-    layout="wide"
-)
+# -------------------------
+# Streamlit App: Multi-Model AI Agent
+# Converted from provided React TSX (pixel-preserving layout via HTML/CSS)
+# -------------------------
 
-# Custom CSS
-st.markdown("""
+st.set_page_config(page_title="Multi-Model AI Agent", page_icon="🎙️", layout="wide")
+
+# --- Custom CSS to mimic Tailwind look from React version ---
+st.markdown('''
 <style>
-    .main {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    }
-    .stTextInput > div > div > input {
-        background-color: rgba(255, 255, 255, 0.1);
-    }
-    .stTextArea > div > div > textarea {
-        background-color: rgba(255, 255, 255, 0.1);
-    }
+:root{--bg1:#0f172a;--card-bg:rgba(255,255,255,0.06);--muted:#9f7aea;--accent1:#667eea;--accent2:#764ba2}
+body{background:linear-gradient(135deg, #081329 0%, #2b0b29 100%);}
+.main-card{background:linear-gradient(90deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));border:1px solid rgba(255,255,255,0.08);padding:28px;border-radius:20px}
+.btn{background:linear-gradient(90deg,#4f46e5,#9333ea,#ec4899);color:white;padding:14px;border-radius:12px;border:none;font-weight:600}
+.small-btn{background:rgba(255,255,255,0.06);color:white;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.08)}
+.card{background:linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:18px;border-radius:12px;border:1px solid rgba(255,255,255,0.04)}
+.h1{font-size:38px;color:#fff;margin:0}
+.h2{color:#ddd}
+textarea, input, select{background:rgba(255,255,255,0.03);color:#efe8ff;border:1px solid rgba(255,255,255,0.06);padding:10px;border-radius:8px}
+.progress{padding:12px;border-radius:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.04)}
+.bad{background:rgba(220,38,38,0.12);border:1px solid rgba(220,38,38,0.18);color:#ffdddd;padding:12px;border-radius:10px}
+.good{background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.14);color:#ddffef;padding:12px;border-radius:10px}
+.icon{vertical-align:middle}
+.footer{color:#c7b3ff;font-size:13px}
 </style>
-""", unsafe_allow_html=True)
+''', unsafe_allow_html=True)
 
-# Initialize session state
-if 'generated_text' not in st.session_state:
-    st.session_state.generated_text = ""
-if 'audio_data' not in st.session_state:
-    st.session_state.audio_data = None
+# --- Helper functions ---
 
-# Title
-st.title("🎙️ Multi-Model AI Agent")
-st.markdown("**Generate & enhance text with AI (OpenAI, Claude, Gemini, HF) → Convert to audio/video**")
+def require_key(key, name):
+    if not key:
+        raise ValueError(f"{name} API key required for selected model")
 
-# Sidebar for API Keys
+
+def safe_json(resp):
+    try:
+        return resp.json()
+    except Exception:
+        return {"error": "invalid json response"}
+
+# --- Sidebar: API keys and instructions ---
 with st.sidebar:
     st.header("🔑 API Configuration")
-    
-    with st.expander("LLM API Keys", expanded=False):
-        openai_key = st.text_input("OpenAI API Key", type="password", key="openai_key")
-        anthropic_key = st.text_input("Anthropic (Claude) API Key", type="password", key="anthropic_key")
-        google_key = st.text_input("Google (Gemini) API Key", type="password", key="google_key")
-        hf_key = st.text_input("Hugging Face API Key", type="password", key="hf_key")
-    
-    with st.expander("TTS/Video API Keys", expanded=False):
-        elevenlabs_key = st.text_input("ElevenLabs API Key", type="password", key="elevenlabs_key")
-        did_key = st.text_input("D-ID API Key", type="password", key="did_key")
-    
-    st.divider()
-    
-    st.markdown("""
-    ### 📚 Get API Keys:
-    - [OpenAI](https://platform.openai.com)
-    - [Claude](https://console.anthropic.com)
-    - [Gemini](https://makersuite.google.com/app/apikey)
-    - [Hugging Face](https://huggingface.co/settings/tokens)
-    - [ElevenLabs](https://elevenlabs.io)
-    - [D-ID](https://www.d-id.com)
-    """)
+    st.markdown("---")
+    openai_key = st.text_input("OpenAI API Key", type="password")
+    anthropic_key = st.text_input("Anthropic (Claude) API Key", type="password")
+    google_key = st.text_input("Google (Gemini) API Key", type="password")
+    hf_key = st.text_input("Hugging Face API Key", type="password")
+    st.markdown("---")
+    elevenlabs_key = st.text_input("ElevenLabs API Key", type="password")
+    did_key = st.text_input("D-ID API Key", type="password")
 
-# Main content
-col1, col2 = st.columns(2)
+    st.markdown("\n---\nExamples of keys and links:\n- OpenAI: platform.openai.com\n- Claude: console.anthropic.com\n- Gemini: makersuite.google.com\n- Hugging Face: huggingface.co/settings/tokens\n- ElevenLabs: elevenlabs.io\n- D-ID: d-id.com")
+
+# --- Page header (matches React layout) ---
+st.markdown("<div style='display:flex;align-items:center;gap:16px;margin-bottom:18px'>"
+            "<div style='width:56px;height:56px;background:linear-gradient(135deg,#c7b3ff,#ffd1f0);border-radius:12px;display:flex;align-items:center;justify-content:center'>🎙️</div>"
+            f"<div><h1 class='h1'>Multi-Model AI Agent</h1><div class='h2'>Generate & enhance text with AI (OpenAI, Claude, Gemini, HF) → Convert to audio/video</div></div></div>", unsafe_allow_html=True)
+
+# --- Main card container ---
+st.markdown("<div class='main-card'>", unsafe_allow_html=True)
+
+# Layout columns to mimic React grid
+col1, col2 = st.columns([1,1])
 
 with col1:
-    st.markdown("### 🧠 Step 1: AI Text Generation")
-    
-    llm_model = st.selectbox(
-        "Select LLM Model",
-        ["openai", "claude", "gemini", "huggingface"],
-        format_func=lambda x: {
-            "openai": "OpenAI GPT-4",
-            "claude": "Claude (Anthropic)",
-            "gemini": "Google Gemini",
-            "huggingface": "Hugging Face (Llama 2)"
-        }[x]
-    )
-    
-    enhance_mode = st.selectbox(
-        "Enhancement Mode",
-        ["improve", "script", "narration", "podcast", "story", "professional", "casual"],
-        format_func=lambda x: {
-            "improve": "Improve and enhance",
-            "script": "Convert to video script",
-            "narration": "Convert to narration style",
-            "podcast": "Convert to podcast intro/outro",
-            "story": "Expand into a story",
-            "professional": "Make more professional",
-            "casual": "Make more casual and friendly"
-        }[x]
-    )
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
+    st.markdown("<h3 style='color:#fff;margin-top:0'>Step 1: AI Text Generation/Enhancement</h3>")
+    llm_model = st.selectbox("Select LLM Model", ("openai","claude","gemini","huggingface"), format_func=lambda x: {"openai":"OpenAI GPT-4","claude":"Claude (Anthropic)","gemini":"Google Gemini","huggingface":"Hugging Face (Llama 2)"}[x])
+    enhance_mode = st.selectbox("Enhancement Mode", ("improve","script","narration","podcast","story","professional","casual"), format_func=lambda x: {"improve":"Improve and enhance","script":"Convert to video script","narration":"Convert to narration style","podcast":"Convert to podcast intro/outro","story":"Expand into a story","professional":"Make more professional","casual":"Make more casual and friendly"}[x])
+    st.markdown("</div>", unsafe_allow_html=True)
 
 with col2:
-    st.markdown("### 🎙️ Step 2: Audio/Video Generation")
-    
-    tts_model = st.selectbox(
-        "Select TTS/Video Model",
-        ["openai-tts", "elevenlabs", "did"],
-        format_func=lambda x: {
-            "openai-tts": "OpenAI TTS",
-            "elevenlabs": "ElevenLabs",
-            "did": "D-ID (Video)"
-        }[x]
-    )
-    
-    # Voice selection based on TTS model
-    voice_options = {
-        "openai-tts": ["alloy", "echo", "fable", "onyx", "nova", "shimmer"],
-        "elevenlabs": ["Rachel", "Drew", "Clyde", "Paul", "Domi", "Dave"],
-        "did": ["en-US-JennyNeural", "en-US-GuyNeural", "en-GB-SoniaNeural"]
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
+    st.markdown("<h3 style='color:#fff;margin-top:0'>Step 2: Audio/Video Generation</h3>")
+    tts_model = st.selectbox("Select TTS/Video Model", ("openai-tts","elevenlabs","did"), format_func=lambda x: {"openai-tts":"OpenAI TTS","elevenlabs":"ElevenLabs","did":"D-ID (Video)"}[x])
+    voice_map = {
+        'openai-tts': ["alloy","echo","fable","onyx","nova","shimmer"],
+        'elevenlabs': ["Rachel","Drew","Clyde","Paul","Domi","Dave"],
+        'did': ["en-US-JennyNeural","en-US-GuyNeural","en-GB-SoniaNeural"]
     }
-    
-    voice = st.selectbox("Select Voice", voice_options[tts_model])
+    # Set default voice based on model
+    default_voices = voice_map.get(tts_model)
+    voice = st.selectbox("Select Voice", default_voices)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 st.divider()
 
-# Text input
-input_text = st.text_area(
-    "Enter Your Text (will be enhanced by AI)",
-    height=150,
-    placeholder="Enter a topic or text... For example: 'Create an introduction for a podcast about AI technology' or 'Make a professional video script about climate change'"
-)
-
+# Text area
+input_text = st.text_area("Enter Your Text (will be enhanced by AI)", height=160, placeholder="For example: 'Create an introduction for a podcast about AI technology'")
 st.caption(f"{len(input_text)} characters")
 
-# Functions for API calls
-def generate_with_llm(text, model, api_keys, mode):
-    """Generate/enhance text using selected LLM"""
-    
-    enhance_prompts = {
-        "improve": "Improve and enhance the text",
-        "script": "Convert to video script format",
-        "narration": "Convert to narration style",
-        "podcast": "Convert to podcast intro/outro",
-        "story": "Expand into a story",
-        "professional": "Make more professional",
-        "casual": "Make more casual and friendly"
-    }
-    
+# Helpers for API calls (adapted and hardened)
+
+enhance_prompts = {
+    "improve": "Improve and enhance the text",
+    "script": "Convert to video script format",
+    "narration": "Convert to narration style",
+    "podcast": "Convert to podcast intro/outro",
+    "story": "Expand into a story",
+    "professional": "Make more professional",
+    "casual": "Make more casual and friendly"
+}
+
+# encapsulated LLM generation function with safe checks
+
+def generate_with_llm(text, model, keys, mode):
     prompt = f"{enhance_prompts[mode]}. Original text: \"{text}\". Provide only the enhanced text without any preamble or explanation."
-    
-    try:
-        if model == "openai":
-            if not api_keys.get('openai'):
-                raise ValueError("OpenAI API key required")
-            
-            response = requests.post(
-                "https://api.openai.com/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {api_keys['openai']}",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "model": "gpt-4",
-                    "messages": [
-                        {"role": "system", "content": "You are a helpful assistant that enhances text for audio/video content."},
-                        {"role": "user", "content": prompt}
-                    ],
-                    "max_tokens": 500
-                }
-            )
-            response.raise_for_status()
-            return response.json()['choices'][0]['message']['content']
-        
-        elif model == "claude":
-            if not api_keys.get('anthropic'):
-                raise ValueError("Anthropic API key required")
-            
-            response = requests.post(
-                "https://api.anthropic.com/v1/messages",
-                headers={
-                    "x-api-key": api_keys['anthropic'],
-                    "anthropic-version": "2023-06-01",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "model": "claude-3-5-sonnet-20241022",
-                    "max_tokens": 500,
-                    "messages": [{"role": "user", "content": prompt}]
-                }
-            )
-            response.raise_for_status()
-            return response.json()['content'][0]['text']
-        
-        elif model == "gemini":
-            if not api_keys.get('google'):
-                raise ValueError("Google API key required")
-            
-            response = requests.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={api_keys['google']}",
-                headers={"Content-Type": "application/json"},
-                json={
-                    "contents": [{"parts": [{"text": prompt}]}]
-                }
-            )
-            response.raise_for_status()
-            return response.json()['candidates'][0]['content']['parts'][0]['text']
-        
-        elif model == "huggingface":
-            if not api_keys.get('huggingface'):
-                raise ValueError("Hugging Face API key required")
-            
-            response = requests.post(
-                "https://api-inference.huggingface.co/models/meta-llama/Llama-2-70b-chat-hf",
-                headers={
-                    "Authorization": f"Bearer {api_keys['huggingface']}",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "inputs": prompt,
-                    "parameters": {"max_new_tokens": 500}
-                }
-            )
-            response.raise_for_status()
-            return response.json()[0]['generated_text']
-    
-    except Exception as e:
-        raise Exception(f"LLM Generation failed: {str(e)}")
 
-def generate_audio_video(text, model, voice, api_keys):
-    """Generate audio or video from text"""
-    
-    try:
-        if model == "openai-tts":
-            if not api_keys.get('openai'):
-                raise ValueError("OpenAI API key required")
-            
-            response = requests.post(
-                "https://api.openai.com/v1/audio/speech",
-                headers={
-                    "Authorization": f"Bearer {api_keys['openai']}",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "model": "tts-1-hd",
-                    "input": text,
-                    "voice": voice
-                }
-            )
-            response.raise_for_status()
-            return response.content, "audio"
-        
-        elif model == "elevenlabs":
-            if not api_keys.get('elevenlabs'):
-                raise ValueError("ElevenLabs API key required")
-            
-            voice_map = {
-                'Rachel': '21m00Tcm4TlvDq8ikWAM',
-                'Drew': '29vD33N1CtxCmqQRPOHJ',
-                'Clyde': '2EiwWnXFnvU5JabPnv8n',
-                'Paul': '5Q0t7uMcjvnagumLfvZi',
-                'Domi': 'AZnzlk1XvdvUeBnXmlld',
-                'Dave': 'CYw3kZ02Hs0563khs1Fj'
-            }
-            voice_id = voice_map.get(voice, voice_map['Rachel'])
-            
-            response = requests.post(
-                f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}",
-                headers={
-                    "xi-api-key": api_keys['elevenlabs'],
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "text": text,
-                    "model_id": "eleven_monolingual_v1"
-                }
-            )
-            response.raise_for_status()
-            return response.content, "audio"
-        
-        elif model == "did":
-            if not api_keys.get('did'):
-                raise ValueError("D-ID API key required")
-            
-            response = requests.post(
-                "https://api.d-id.com/talks",
-                headers={
-                    "Authorization": f"Basic {api_keys['did']}",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "script": {
-                        "type": "text",
-                        "input": text,
-                        "provider": {
-                            "type": "microsoft",
-                            "voice_id": voice
-                        }
-                    },
-                    "source_url": "https://create-images-results.d-id.com/default-presenter.jpg"
-                }
-            )
-            response.raise_for_status()
-            data = response.json()
-            return data.get('result_url'), "video"
-    
-    except Exception as e:
-        raise Exception(f"TTS/Video Generation failed: {str(e)}")
+    if model == "openai":
+        require_key(keys.get('openai'), 'OpenAI')
+        resp = requests.post("https://api.openai.com/v1/chat/completions",
+                             headers={"Authorization":f"Bearer {keys.get('openai')}","Content-Type":"application/json"},
+                             json={"model":"gpt-4","messages":[{"role":"system","content":"You are a helpful assistant that enhances text for audio/video content."},{"role":"user","content":prompt}],"max_tokens":500}, timeout=60)
+        if resp.status_code != 200:
+            raise Exception(safe_json(resp).get('error', resp.text))
+        data = resp.json()
+        return data['choices'][0]['message']['content']
 
-# Generate button
-if st.button("✨ Generate with AI → Audio/Video ✨", type="primary", use_container_width=True):
+    elif model == 'claude':
+        require_key(keys.get('anthropic'), 'Claude (Anthropic)')
+        resp = requests.post("https://api.anthropic.com/v1/messages",
+                             headers={"x-api-key":keys.get('anthropic'),"anthropic-version":"2023-06-01","Content-Type":"application/json"},
+                             json={"model":"claude-3-5-sonnet-20241022","max_tokens":500,"messages":[{"role":"user","content":prompt}]}, timeout=60)
+        if resp.status_code != 200:
+            raise Exception(safe_json(resp).get('error', resp.text))
+        j = resp.json()
+        # Claude returns different shapes; try common fields
+        if isinstance(j.get('content'), list):
+            return j['content'][0].get('text')
+        return j.get('completion') or json.dumps(j)
+
+    elif model == 'gemini':
+        require_key(keys.get('google'), 'Google Gemini')
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={keys.get('google')}"
+        resp = requests.post(url, headers={"Content-Type":"application/json"}, json={"contents":[{"parts":[{"text":prompt}]}]}, timeout=60)
+        if resp.status_code != 200:
+            raise Exception(safe_json(resp).get('error', resp.text))
+        j = resp.json()
+        return j['candidates'][0]['content']['parts'][0]['text']
+
+    elif model == 'huggingface':
+        require_key(keys.get('huggingface'), 'Hugging Face')
+        resp = requests.post("https://api-inference.huggingface.co/models/meta-llama/Llama-2-70b-chat-hf",
+                             headers={"Authorization":f"Bearer {keys.get('huggingface')}","Content-Type":"application/json"},
+                             json={"inputs":prompt,"parameters":{"max_new_tokens":500}}, timeout=120)
+        if resp.status_code != 200:
+            raise Exception(safe_json(resp).get('error', resp.text))
+        j = resp.json()
+        # Many HF endpoints return text directly or as dict
+        if isinstance(j, list) and 'generated_text' in j[0]:
+            return j[0]['generated_text']
+        if isinstance(j, dict) and 'generated_text' in j:
+            return j['generated_text']
+        return json.dumps(j)
+
+    else:
+        raise ValueError('Unsupported LLM')
+
+
+# Audio/Video generation
+
+def generate_audio_video(text, model, voice, keys):
+    if model == 'openai-tts':
+        require_key(keys.get('openai'), 'OpenAI')
+        resp = requests.post("https://api.openai.com/v1/audio/speech",
+                             headers={"Authorization":f"Bearer {keys.get('openai')}","Content-Type":"application/json"},
+                             json={"model":"tts-1-hd","input":text,"voice":voice}, timeout=120)
+        if resp.status_code != 200:
+            data = safe_json(resp)
+            raise Exception(data.get('error', data))
+        return {'type':'audio','content':resp.content}
+
+    elif model == 'elevenlabs':
+        require_key(keys.get('elevenlabs'), 'ElevenLabs')
+        # map voice id
+        voice_map = {'Rachel':'21m00Tcm4TlvDq8ikWAM','Drew':'29vD33N1CtxCmqQRPOHJ','Clyde':'2EiwWnXFnvU5JabPnv8n','Paul':'5Q0t7uMcjvnagumLfvZi','Domi':'AZnzlk1XvdvUeBnXmlld','Dave':'CYw3kZ02Hs0563khs1Fj'}
+        vid = voice_map.get(voice, list(voice_map.values())[0])
+        resp = requests.post(f"https://api.elevenlabs.io/v1/text-to-speech/{vid}", headers={"xi-api-key":keys.get('elevenlabs'),"Content-Type":"application/json"}, json={"text":text,"model_id":"eleven_monolingual_v1"}, timeout=120)
+        if resp.status_code != 200:
+            raise Exception(safe_json(resp))
+        return {'type':'audio','content':resp.content}
+
+    elif model == 'did':
+        require_key(keys.get('did'), 'D-ID')
+        # D-ID wants Basic base64 auth: encode key with a trailing colon
+        did_auth = base64.b64encode(f"{keys.get('did')}:".encode()).decode()
+        resp = requests.post("https://api.d-id.com/talks",
+                             headers={"Authorization":f"Basic {did_auth}","Content-Type":"application/json"},
+                             json={"script":{"type":"text","input":text,"provider":{"type":"microsoft","voice_id":voice}},"source_url":"https://create-images-results.d-id.com/default-presenter.jpg"}, timeout=120)
+        if resp.status_code not in (200,201):
+            raise Exception(safe_json(resp))
+        j = resp.json()
+        # D-ID may return a result URL or an id you poll; we'll return whatever useful
+        return {'type':'video','url':j.get('result_url') or j.get('id') or j}
+
+    else:
+        raise ValueError('Unsupported TTS/Video model')
+
+
+# --- Generate button and processing logic ---
+
+if st.button("✨ Generate with AI → Audio/Video ✨"):
     if not input_text.strip():
         st.error("Please enter text to convert")
     else:
-        # Collect API keys
+        # collect keys into dict
         api_keys = {
             'openai': openai_key,
             'anthropic': anthropic_key,
@@ -314,79 +219,44 @@ if st.button("✨ Generate with AI → Audio/Video ✨", type="primary", use_con
             'elevenlabs': elevenlabs_key,
             'did': did_key
         }
-        
         try:
-            # Step 1: Generate/Enhance text with LLM
-            with st.spinner("🧠 Generating/Enhancing text with AI..."):
-                enhanced_text = generate_with_llm(input_text, llm_model, api_keys, enhance_mode)
-                st.session_state.generated_text = enhanced_text
-            
-            st.success("✅ Text enhanced successfully!")
-            
-            # Step 2: Generate audio/video
-            with st.spinner("🎙️ Converting text to audio/video..."):
-                media_data, media_type = generate_audio_video(enhanced_text, tts_model, voice, api_keys)
-                st.session_state.audio_data = media_data
-                st.session_state.media_type = media_type
-            
-            st.success("✅ Audio/Video generated successfully!")
-        
+            # Basic validation: only require the keys for selected models
+            # LLM selected
+            required_llm_key = 'google' if llm_model == 'gemini' else ('anthropic' if llm_model == 'claude' else llm_model)
+            if not api_keys.get(required_llm_key):
+                st.error(f"Missing API key for selected LLM: {required_llm_key}")
+            else:
+                with st.spinner('🧠 Generating/Enhancing text with AI...'):
+                    enhanced = generate_with_llm(input_text, llm_model, api_keys, enhance_mode)
+                    st.session_state['generated_text'] = enhanced
+                    st.success('✅ Text enhanced successfully!')
+
+                with st.spinner('🎙️ Converting text to audio/video...'):
+                    media = generate_audio_video(enhanced, tts_model, voice, api_keys)
+                    # show results
+                    if media['type'] == 'audio':
+                        st.session_state['media_type'] = 'audio'
+                        st.audio(media['content'])
+                        st.download_button('⬇️ Download Audio', data=media['content'], file_name='generated_audio.mp3', mime='audio/mpeg')
+                    else:
+                        st.session_state['media_type'] = 'video'
+                        # if URL provided show video
+                        if media.get('url') and isinstance(media.get('url'), str) and media.get('url').startswith('http'):
+                            st.video(media.get('url'))
+                            st.markdown(f"[Download Video]({media.get('url')})")
+                        else:
+                            st.write('Video generation response:', media)
+
         except Exception as e:
             st.error(f"❌ Error: {str(e)}")
 
-# Display results
-if st.session_state.generated_text:
-    st.divider()
+# --- Display generated text if present ---
+if 'generated_text' in st.session_state and st.session_state['generated_text']:
+    st.markdown("---")
     st.markdown("### 🧠 AI Enhanced Text")
-    st.text_area("Generated Text", st.session_state.generated_text, height=150, disabled=True)
+    st.text_area('', st.session_state['generated_text'], height=160)
 
-if st.session_state.audio_data:
-    st.divider()
-    st.markdown("### 🎵 Generated Content")
-    
-    if st.session_state.media_type == "audio":
-        st.audio(st.session_state.audio_data, format="audio/mp3")
-        
-        # Download button
-        st.download_button(
-            label="⬇️ Download Audio",
-            data=st.session_state.audio_data,
-            file_name="generated_audio.mp3",
-            mime="audio/mp3",
-            use_container_width=True
-        )
-    elif st.session_state.media_type == "video":
-        st.video(st.session_state.audio_data)
-        st.markdown(f"[Download Video]({st.session_state.audio_data})")
+st.markdown("</div>", unsafe_allow_html=True)
 
-# Footer
-st.divider()
-with st.expander("ℹ️ How to Use"):
-    st.markdown("""
-    1. **Enter API Keys** in the sidebar (click 'API Configuration')
-    2. **Select your LLM model** (OpenAI, Claude, Gemini, or Hugging Face)
-    3. **Choose enhancement mode** (how AI should process your text)
-    4. **Select TTS/Video model** and voice
-    5. **Enter your text** or topic
-    6. **Click Generate** and wait for processing
-    7. **Preview and download** your content
-    
-    **Example inputs:**
-    - "Create an introduction for a podcast about AI technology"
-    - "Make a professional video script about climate change"
-    - "Write a casual story about space exploration"
-    """)
-
-with st.expander("💰 Cost Information"):
-    st.markdown("""
-    ### Free Tiers Available:
-    - **Gemini**: Free tier with generous limits
-    - **Hugging Face**: Free tier available
-    
-    ### Paid Services:
-    - **OpenAI GPT-4**: ~$0.03 per 1K tokens
-    - **OpenAI TTS**: $15 per 1M characters
-    - **Claude**: Similar to OpenAI pricing
-    - **ElevenLabs**: Free 10K chars/month, then $5/month
-    - **D-ID**: Free trial, then $0.12-$0.30 per video
-    """)
+# Footer info
+st.markdown("<div style='margin-top:18px' class='footer'>Built from your React design — preserved layout & visuals.</div>", unsafe_allow_html=True)
