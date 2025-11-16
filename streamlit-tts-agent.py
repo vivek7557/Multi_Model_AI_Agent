@@ -910,7 +910,7 @@ if st.session_state.media_result:
 st.markdown("""
 <div class='footer'>
     <div style='font-weight: 600; font-size: 16px; margin-bottom: 8px;'>🚀 Multi-Model AI Agent</div>
-    <div>Built with ❤️ by Vivek YT • Powered by Claude AI</div>
+    <div>Built with ❤️ by Vivek  • Powered by Claude AI</div>
     <div style='margin-top: 12px; font-size: 12px; opacity: 0.7;'>
         Claude • OpenAI • Gemini • ElevenLabs • D-ID
     </div>
