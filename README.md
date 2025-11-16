@@ -43,7 +43,7 @@ A powerful web application that combines multiple AI language models (Claude, GP
 
 ## 🚀 Live Demo
 
-Try it now: **[Your App URL](https://your-app-url.streamlit.app)**
+Try it now: **[Your App URL](https://https://multimodelaiagent-frxx8ahgrn6ft9nd8amz4h.streamlit.app/)**
 
 ---
 
