@@ -4,14 +4,14 @@ import streamlit as st
 st.set_page_config(
     page_title="AI Generation",
     page_icon="🤖",
-    layout="centered",  # Keeps content centered
+    layout="centered",
     initial_sidebar_state="collapsed"
 )
 
-# Custom CSS for matching the reference UI + improved aesthetics
+# Custom CSS for layout and styling
 st.markdown("""
 <style>
-    /* Main container - narrower and centered */
+    /* Main container */
     .main-container {
         max-width: 600px;
         margin: 2rem auto;
@@ -20,9 +20,31 @@ st.markdown("""
         border-radius: 12px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.03);
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        position: relative;
     }
-    
-    /* Header styling */
+
+    /* Settings button */
+    .settings-btn {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background-color: #edf2f7;
+        border: none;
+        border-radius: 8px;
+        padding: 0.4rem 0.8rem;
+        font-size: 0.95rem;
+        color: #4a5568;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+        transition: background-color 0.2s;
+    }
+    .settings-btn:hover {
+        background-color: #e2e8f0;
+    }
+
+    /* Header */
     .header-title {
         font-size: 2.4rem;
         color: #2d3748;
@@ -30,8 +52,8 @@ st.markdown("""
         margin-bottom: 0.5rem;
         text-align: left;
     }
-    
-    /* Navigation bar styling */
+
+    /* Nav bar */
     .nav-bar {
         background-color: #4a5568;
         padding: 0.75rem 1.25rem;
@@ -40,7 +62,6 @@ st.markdown("""
         display: flex;
         align-items: center;
     }
-    
     .nav-item {
         color: white;
         font-size: 1.1rem;
@@ -48,8 +69,8 @@ st.markdown("""
         padding: 0.5rem 1rem;
         border-radius: 6px;
     }
-    
-    /* Text area styling */
+
+    /* Text area */
     .content-input {
         width: 100%;
         padding: 1rem;
@@ -63,21 +84,19 @@ st.markdown("""
         resize: none;
         height: 100px;
     }
-    
     .content-input:focus {
         outline: none;
         border-color: #4f46e5;
         box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
     }
-    
-    /* Feature cards grid */
+
+    /* Feature cards */
     .feature-grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
         gap: 1rem;
         margin-bottom: 1.5rem;
     }
-    
     .feature-card {
         background-color: white;
         padding: 1rem;
@@ -93,26 +112,23 @@ st.markdown("""
         height: 100px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
-    
     .feature-card:hover {
         border-color: #4f46e5;
         box-shadow: 0 4px 8px rgba(79, 70, 229, 0.1);
         transform: translateY(-2px);
     }
-    
     .feature-icon {
         font-size: 1.8rem;
         margin-bottom: 0.5rem;
         color: #4a5568;
     }
-    
     .feature-label {
         font-size: 1.05rem;
         font-weight: 500;
         color: #2d3748;
     }
-    
-    /* Generate button styling */
+
+    /* Generate button */
     .generate-button {
         width: 100%;
         padding: 1rem;
@@ -127,19 +143,44 @@ st.markdown("""
         margin-top: 1rem;
         box-shadow: 0 4px 6px rgba(79, 70, 229, 0.2);
     }
-    
     .generate-button:hover {
         background-color: #4338ca;
         transform: translateY(-2px);
         box-shadow: 0 6px 8px rgba(79, 70, 229, 0.3);
     }
-    
-    /* Footer styling */
+
+    /* Footer */
     .footer {
         margin-top: 2rem;
         text-align: center;
         color: #718096;
         font-size: 0.85rem;
+    }
+
+    /* Settings panel styling */
+    .settings-panel {
+        background-color: white;
+        padding: 1.2rem;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        margin-top: 1rem;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    .settings-panel label {
+        display: block;
+        margin-top: 1rem;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        color: #2d3748;
+        font-size: 0.95rem;
+    }
+    .settings-panel select, .settings-panel input {
+        width: 100%;
+        padding: 0.6rem;
+        border: 1px solid #cbd5e0;
+        border-radius: 6px;
+        font-size: 0.95rem;
+        background-color: #f9fafb;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -147,38 +188,70 @@ st.markdown("""
 # Main container
 st.markdown('<div class="main-container">', unsafe_allow_html=True)
 
+# Settings button (top-right)
+st.markdown('<button class="settings-btn">⚙️ Settings</button>', unsafe_allow_html=True)
+
+# Settings panel - initially collapsed
+with st.expander("", expanded=False):
+    st.markdown('<div class="settings-panel">', unsafe_allow_html=True)
+    
+    api_key = st.text_input("API Key", type="password", placeholder="Enter your API key")
+    
+    model = st.selectbox(
+        "Model",
+        options=["gpt-4o", "gpt-4", "claude-3.5", "llama-3.1", "gemini-1.5"],
+        index=0
+    )
+    
+    video_type = st.selectbox(
+        "Video Type",
+        options=["Short (15-30s)", "Tutorial", "Animation", "Explainer", "Commercial"],
+        index=0
+    )
+    
+    audio_type = st.selectbox(
+        "Audio Type",
+        options=["Voiceover", "Background Music", "Podcast Intro", "Narration", "SFX"],
+        index=0
+    )
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+
 # Header
 st.markdown('<h1 class="header-title">AI Generation</h1>', unsafe_allow_html=True)
 
-# Navigation bar
+# Nav bar
 st.markdown('<div class="nav-bar"><span class="nav-item">Home</span></div>', unsafe_allow_html=True)
 
-# Content description input
-st.markdown('<textarea class="content-input" placeholder="Describe the content you want to create..."></textarea>', unsafe_allow_html=True)
+# Prompt input
+prompt = st.text_area("", placeholder="Describe the content you want to create...", height=100)
 
-# Feature selection (Audio & Video)
-st.markdown('<div class="feature-grid">', unsafe_allow_html=True)
+# Feature cards
+col1, col2 = st.columns(2, gap="medium")
 
-# Audio card
-st.markdown("""
-<div class="feature-card">
-    <div class="feature-icon">🔊</div>
-    <div class="feature-label">Audio</div>
-</div>
-""", unsafe_allow_html=True)
+with col1:
+    st.markdown("""
+    <div class="feature-card">
+        <div class="feature-icon">🔊</div>
+        <div class="feature-label">Audio</div>
+    </div>
+    """, unsafe_allow_html=True)
 
-# Video card
-st.markdown("""
-<div class="feature-card">
-    <div class="feature-icon">▶️</div>
-    <div class="feature-label">Video</div>
-</div>
-""", unsafe_allow_html=True)
-
-st.markdown('</div>', unsafe_allow_html=True)
+with col2:
+    st.markdown("""
+    <div class="feature-card">
+        <div class="feature-icon">▶️</div>
+        <div class="feature-label">Video</div>
+    </div>
+    """, unsafe_allow_html=True)
 
 # Generate button
-st.markdown('<button class="generate-button">Generate</button>', unsafe_allow_html=True)
+if st.button("Generate", use_container_width=True, type="primary"):
+    if not prompt.strip():
+        st.warning("Please describe what you'd like to generate.")
+    else:
+        st.success("✅ Generation started! (This is a demo)")
+        st.balloons()
 
 # Footer
 st.markdown('<div class="footer">Built with ❤️ using Streamlit</div>', unsafe_allow_html=True)
