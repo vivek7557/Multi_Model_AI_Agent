@@ -2,8 +2,8 @@ import streamlit as st
 
 # Page configuration
 st.set_page_config(
-    page_title="AI Generation",
-    page_icon="🤖",
+    page_title="Text to Audio & Video",
+    page_icon="🎙️🎬",
     layout="centered",
     initial_sidebar_state="collapsed"
 )
@@ -203,22 +203,44 @@ with st.expander("", expanded=False):
         index=0
     )
     
-    video_type = st.selectbox(
-        "Video Type",
-        options=["Short (15-30s)", "Tutorial", "Animation", "Explainer", "Commercial"],
+    # Voice Type Selector (10 realistic voices)
+    voice_type = st.selectbox(
+        "Voice Type",
+        options=[
+            "Male - Neutral",
+            "Female - Calm",
+            "Male - Energetic",
+            "Female - Professional",
+            "Male - Deep & Slow",
+            "Female - Friendly",
+            "Male - Young & Casual",
+            "Female - Authoritative",
+            "Male - Storyteller",
+            "Female - Singing Tone"
+        ],
         index=0
     )
     
-    audio_type = st.selectbox(
-        "Audio Type",
-        options=["Voiceover", "Background Music", "Podcast Intro", "Narration", "SFX"],
+    # Video Style Selector (8 diverse styles)
+    video_style = st.selectbox(
+        "Video Style",
+        options=[
+            "Cinematic Short Film",
+            "YouTube Tutorial",
+            "Social Media Reel",
+            "Corporate Explainer",
+            "Animated Cartoon",
+            "Documentary Narration",
+            "Product Demo",
+            "News Report Style"
+        ],
         index=0
     )
     
     st.markdown('</div>', unsafe_allow_html=True)
 
-# Header
-st.markdown('<h1 class="header-title">AI Generation</h1>', unsafe_allow_html=True)
+# Header — Changed to "Text to Audio & Video"
+st.markdown('<h1 class="header-title">Text to Audio & Video</h1>', unsafe_allow_html=True)
 
 # Nav bar
 st.markdown('<div class="nav-bar"><span class="nav-item">Home</span></div>', unsafe_allow_html=True)
@@ -250,7 +272,7 @@ if st.button("Generate", use_container_width=True, type="primary"):
     if not prompt.strip():
         st.warning("Please describe what you'd like to generate.")
     else:
-        st.success("✅ Generation started! (This is a demo)")
+        st.success(f"✅ Generation started! Using: {voice_type} voice & {video_style} style")
         st.balloons()
 
 # Footer
