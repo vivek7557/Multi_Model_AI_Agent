@@ -4,45 +4,46 @@ import streamlit as st
 st.set_page_config(
     page_title="AI Generation",
     page_icon="🤖",
-    layout="centered",  # Centered layout for cleaner appearance
+    layout="centered",  # Keeps content centered
     initial_sidebar_state="collapsed"
 )
 
-# Custom CSS for matching the reference UI
+# Custom CSS for matching the reference UI + improved aesthetics
 st.markdown("""
 <style>
-    /* Main container styling */
+    /* Main container - narrower and centered */
     .main-container {
-        max-width: 800px;
-        margin: 0 auto;
-        padding: 2rem;
-        background-color: #f8f9fa;
-        border-radius: 10px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        max-width: 600px;
+        margin: 2rem auto;
+        padding: 1.5rem;
+        background-color: #fafafa;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
     
     /* Header styling */
     .header-title {
-        font-size: 2.8rem;
-        color: #333;
-        font-weight: 600;
-        margin-bottom: 1rem;
+        font-size: 2.4rem;
+        color: #2d3748;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
         text-align: left;
     }
     
     /* Navigation bar styling */
     .nav-bar {
-        background-color: #3a4750;
-        padding: 1rem 1.5rem;
+        background-color: #4a5568;
+        padding: 0.75rem 1.25rem;
         border-radius: 8px;
-        margin-bottom: 2rem;
+        margin-bottom: 1.5rem;
         display: flex;
         align-items: center;
     }
     
     .nav-item {
         color: white;
-        font-size: 1.2rem;
+        font-size: 1.1rem;
         font-weight: 500;
         padding: 0.5rem 1rem;
         border-radius: 6px;
@@ -51,89 +52,94 @@ st.markdown("""
     /* Text area styling */
     .content-input {
         width: 100%;
-        padding: 1.2rem;
-        border: 2px solid #d1d5da;
+        padding: 1rem;
+        border: 2px solid #cbd5e0;
         border-radius: 8px;
-        font-size: 1.1rem;
-        color: #6b7280;
+        font-size: 1.05rem;
+        color: #718096;
         background-color: white;
-        margin-bottom: 2rem;
-        transition: border-color 0.3s ease;
+        margin-bottom: 1.5rem;
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        resize: none;
+        height: 100px;
     }
     
     .content-input:focus {
         outline: none;
-        border-color: #3b82f6;
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
     }
     
-    /* Feature cards styling */
+    /* Feature cards grid */
     .feature-grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
-        gap: 1.5rem;
-        margin-bottom: 2rem;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
     }
     
     .feature-card {
         background-color: white;
-        padding: 1.5rem;
-        border: 2px solid #d1d5da;
+        padding: 1rem;
+        border: 2px solid #e2e8f0;
         border-radius: 8px;
         text-align: center;
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition: all 0.2s ease;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        height: 120px;
+        height: 100px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
     
     .feature-card:hover {
-        border-color: #3b82f6;
+        border-color: #4f46e5;
+        box-shadow: 0 4px 8px rgba(79, 70, 229, 0.1);
         transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
     
     .feature-icon {
-        font-size: 2rem;
+        font-size: 1.8rem;
         margin-bottom: 0.5rem;
-        color: #6b7280;
+        color: #4a5568;
     }
     
     .feature-label {
-        font-size: 1.1rem;
+        font-size: 1.05rem;
         font-weight: 500;
-        color: #333;
+        color: #2d3748;
     }
     
     /* Generate button styling */
     .generate-button {
         width: 100%;
-        padding: 1.2rem;
-        background-color: #3b82f6;
+        padding: 1rem;
+        background-color: #4f46e5;
         color: white;
         border: none;
         border-radius: 8px;
-        font-size: 1.3rem;
+        font-size: 1.2rem;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.3s ease;
         margin-top: 1rem;
+        box-shadow: 0 4px 6px rgba(79, 70, 229, 0.2);
     }
     
     .generate-button:hover {
-        background-color: #2563eb;
+        background-color: #4338ca;
         transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+        box-shadow: 0 6px 8px rgba(79, 70, 229, 0.3);
     }
     
     /* Footer styling */
     .footer {
-        margin-top: 3rem;
+        margin-top: 2rem;
         text-align: center;
-        color: #6b7280;
-        font-size: 0.9rem;
+        color: #718096;
+        font-size: 0.85rem;
     }
 </style>
 """, unsafe_allow_html=True)
