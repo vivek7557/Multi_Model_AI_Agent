@@ -25,13 +25,12 @@ logging.basicConfig(level=LOG_LEVEL, format=LOG_FORMAT)
 logger = logging.getLogger(__name__)
 
 # -------------------------------------------------------
-# Database Setup (for usage tracking only)
+# Database Setup
 # -------------------------------------------------------
 def init_db():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     
-    # Usage logs (no user authentication needed)
     c.execute('''
         CREATE TABLE IF NOT EXISTS usage_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -67,292 +66,37 @@ def log_usage(session_id: str, service_type: str, input_text: str, output_text: 
     conn.close()
 
 # -------------------------------------------------------
-# Enhanced Custom CSS with Modern Enterprise Design
+# Simple CSS
 # -------------------------------------------------------
+st.set_page_config(page_title="AI Agent", layout="wide")
+
 st.markdown("""
 <style>
-    /* Import Google Fonts */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-    
-    /* Global Styles */
-    * {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    }
-    
-    /* Main Background with Gradient Animation */
-    .stApp {
-        background: linear-gradient(-45deg, #1a0b2e, #2d1b69, #6b2d5c, #1a0b2e);
-        background-size: 400% 400%;
-        animation: gradientShift 15s ease infinite;
-    }
-    
-    @keyframes gradientShift {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-    }
-    
-    /* Header Styling */
-    .main-header {
-        background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
-        backdrop-filter: blur(10px);
-        border-radius: 20px;
-        padding: 32px;
-        margin-bottom: 30px;
-        border: 1px solid rgba(255,255,255,0.2);
-        box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-    }
-    
-    .header-icon {
-        width: 64px;
-        height: 64px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 16px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 36px;
-        box-shadow: 0 8px 16px rgba(102, 126, 234, 0.4);
-        animation: float 3s ease-in-out infinite;
-    }
-    
-    @keyframes float {
-        0%, 100% { transform: translateY(0px); }
-        50% { transform: translateY(-10px); }
-    }
-    
-    .main-title {
-        color: #ffffff;
-        font-size: 42px;
-        font-weight: 700;
-        margin: 0;
-        text-shadow: 0 2px 10px rgba(0,0,0,0.3);
-    }
-    
-    .subtitle {
-        color: #c7b3ff;
-        font-size: 16px;
-        margin-top: 8px;
-    }
-    
-    /* Card Styles */
-    .glass-card {
-        background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
-        backdrop-filter: blur(10px);
-        border-radius: 16px;
-        padding: 28px;
-        border: 1px solid rgba(255,255,255,0.18);
-        box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-        margin-bottom: 20px;
-        transition: all 0.3s ease;
-    }
-    
-    .glass-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 12px 40px rgba(0,0,0,0.3);
-        border-color: rgba(255,255,255,0.3);
-    }
-    
-    .step-card {
-        background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
-        backdrop-filter: blur(10px);
-        border-radius: 14px;
-        padding: 24px;
-        border: 1px solid rgba(255,255,255,0.15);
-        margin-bottom: 16px;
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .step-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 3px;
-        background: linear-gradient(90deg, #667eea, #764ba2);
-    }
-    
-    .section-title {
-        color: #ffffff;
-        font-size: 20px;
-        font-weight: 600;
-        margin-bottom: 20px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-    
-    .section-icon {
-        display: inline-block;
-        width: 32px;
-        height: 32px;
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        border-radius: 8px;
-        text-align: center;
-        line-height: 32px;
-        font-size: 18px;
-    }
-    
-    /* Input Styles */
-    .stTextInput > div > div > input,
-    .stTextArea > div > div > textarea,
-    .stSelectbox > div > div > select {
-        background: rgba(255,255,255,0.08) !important;
-        color: #ffffff !important;
-        border: 1px solid rgba(255,255,255,0.15) !important;
-        border-radius: 10px !important;
-        padding: 12px !important;
-        font-size: 14px !important;
-        transition: all 0.3s ease !important;
-    }
-    
-    .stTextInput > div > div > input:focus,
-    .stTextArea > div > div > textarea:focus,
-    .stSelectbox > div > div > select:focus {
-        background: rgba(255,255,255,0.12) !important;
-        border-color: rgba(102, 126, 234, 0.6) !important;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
-    }
-    
-    /* Button Styles */
-    .stButton > button {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-        color: white !important;
-        border: none !important;
-        border-radius: 12px !important;
-        padding: 16px 32px !important;
-        font-size: 16px !important;
-        font-weight: 600 !important;
-        width: 100%;
-        transition: all 0.3s ease !important;
-        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4) !important;
-        text-transform: none !important;
-    }
-    
-    .stButton > button:hover {
-        transform: translateY(-2px) !important;
-        box-shadow: 0 6px 25px rgba(102, 126, 234, 0.6) !important;
-    }
-    
-    .stButton > button:active {
-        transform: translateY(0px) !important;
-    }
-    
-    /* Download Button */
-    .stDownloadButton > button {
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
-        color: white !important;
-        border: none !important;
-        border-radius: 10px !important;
-        padding: 12px 24px !important;
-        font-weight: 600 !important;
-        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4) !important;
-    }
-    
-    /* Sidebar Styles */
-    [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, rgba(26, 11, 46, 0.95) 0%, rgba(45, 27, 105, 0.95) 100%);
-        backdrop-filter: blur(10px);
-        border-right: 1px solid rgba(255,255,255,0.1);
-    }
-    
-    [data-testid="stSidebar"] .stTextInput > div > div > input {
-        background: rgba(255,255,255,0.06) !important;
-        border-color: rgba(255,255,255,0.1) !important;
-    }
-    
-    /* Success/Error Messages */
-    .stSuccess {
-        background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.2) 100%) !important;
-        border-left: 4px solid #10b981 !important;
-        border-radius: 8px !important;
-        color: #d1fae5 !important;
-        backdrop-filter: blur(10px);
-    }
-    
-    .stError {
-        background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.2) 100%) !important;
-        border-left: 4px solid #ef4444 !important;
-        border-radius: 8px !important;
-        color: #fecaca !important;
-        backdrop-filter: blur(10px);
-    }
-    
-    .stWarning {
-        background: linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.2) 100%) !important;
-        border-left: 4px solid #fbbf24 !important;
-        border-radius: 8px !important;
-        color: #fef3c7 !important;
-        backdrop-filter: blur(10px);
-    }
-    
-    /* Spinner */
-    .stSpinner > div {
-        border-top-color: #667eea !important;
-    }
-    
-    /* Divider */
-    hr {
-        border-color: rgba(255,255,255,0.1) !important;
-        margin: 30px 0 !important;
-    }
-    
-    /* Audio Player */
-    audio {
-        width: 100%;
-        border-radius: 10px;
-        background: rgba(255,255,255,0.05);
-    }
-    
-    /* Caption Text */
-    .stCaption {
-        color: #a78bfa !important;
-        font-size: 13px !important;
-    }
-    
-    /* Footer */
-    .footer {
-        text-align: center;
-        color: #a78bfa;
-        font-size: 14px;
-        padding: 30px;
-        margin-top: 50px;
-        background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
-        border-radius: 12px;
-        border: 1px solid rgba(255,255,255,0.08);
-    }
-    
-    /* Selectbox Dropdown */
-    [data-baseweb="select"] {
-        background: rgba(255,255,255,0.08) !important;
-    }
-    
-    /* Hide Streamlit Branding */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    
-    /* Responsive */
-    @media (max-width: 768px) {
-        .main-title {
-            font-size: 28px;
-        }
-        .header-icon {
-            width: 48px;
-            height: 48px;
-            font-size: 28px;
-        }
-    }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+.main-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+.card {
+    padding: 20px;
+    border-radius: 8px;
+    background-color: #f8f9fa;
+    margin-bottom: 20px;
+    border: 1px solid #e0e0e0;
+}
+.card h3 {
+    margin-top: 0;
+    color: #333;
+}
 </style>
 """, unsafe_allow_html=True)
 
 # Initialize database
 init_db()
 
-# -------------------------------------------------------
-# Initialize Session State
-# -------------------------------------------------------
+# Initialize session state
 if 'generated_text' not in st.session_state:
     st.session_state.generated_text = ""
 if 'media_result' not in st.session_state:
@@ -360,348 +104,108 @@ if 'media_result' not in st.session_state:
 if 'api_keys' not in st.session_state:
     st.session_state.api_keys = {}
 
-# Get session ID for usage tracking
 session_id = get_session_id()
 
 # -------------------------------------------------------
-# Sidebar API Keys - Enhanced Design
+# Header
+# -------------------------------------------------------
+st.title("🤖 AI Content Generator")
+st.markdown("Generate AI-enhanced text and convert it to audio or video")
+
+# -------------------------------------------------------
+# Sidebar Configuration
 # -------------------------------------------------------
 with st.sidebar:
-    # Sidebar Header
-    st.markdown("""
-    <div style='text-align: center; padding: 20px 0 30px 0; border-bottom: 1px solid rgba(255,255,255,0.1);'>
-        <div style='font-size: 40px; margin-bottom: 10px;'>🔑</div>
-        <h2 style='color: white; margin: 0; font-size: 24px; font-weight: 700;'>API Configuration</h2>
-        <p style='color: #a78bfa; font-size: 12px; margin-top: 8px;'>Enter only the keys you need</p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.header("⚙️ Configuration")
     
-    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
+    st.subheader("API Keys")
+    claude_key = st.text_input("Claude API Key", type="password", placeholder="sk-ant-...")
+    openai_key = st.text_input("OpenAI API Key", type="password", placeholder="sk-...")
+    google_key = st.text_input("Google Gemini Key", type="password", placeholder="AIza...")
+    hf_key = st.text_input("HuggingFace Key", type="password", placeholder="hf_...")
     
-    # Required Section - Claude
-    st.markdown("""
-    <div style='background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(168, 85, 247, 0.15)); 
-                padding: 16px; border-radius: 12px; border: 1px solid rgba(139, 92, 246, 0.3); margin-bottom: 20px;'>
-        <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 12px;'>
-            <span style='font-size: 20px;'>⚡</span>
-            <span style='color: white; font-weight: 600; font-size: 15px;'>Required: Text Generation</span>
-        </div>
-        <div style='color: #c7b3ff; font-size: 11px; line-height: 1.5;'>
-            Enter your Claude API key to enable AI text generation
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.divider()
     
-    claude_key = st.text_input(
-        "Claude API Key (Anthropic)",
-        type="password",
-        key="claude_key",
-        placeholder="sk-ant-api03-...",
-        help="Get your key from console.anthropic.com"
-    )
-    
-    if claude_key:
-        st.markdown("""
-        <div style='background: rgba(16, 185, 129, 0.15); padding: 10px; border-radius: 8px; 
-                    border-left: 3px solid #10b981; margin-top: 8px;'>
-            <div style='color: #6ee7b7; font-size: 12px; display: flex; align-items: center; gap: 6px;'>
-                <span>✓</span> Claude API key configured
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    st.markdown("<div style='height: 25px;'></div>", unsafe_allow_html=True)
-    
-    # Optional Models Expander
-    with st.expander("🔧 Optional: Additional LLM Models", expanded=False):
-        st.markdown("""
-        <div style='color: #a78bfa; font-size: 11px; margin-bottom: 15px; line-height: 1.5;'>
-            Add more AI models for variety. These are completely optional.
-        </div>
-        """, unsafe_allow_html=True)
-        
-        openai_key = st.text_input(
-            "OpenAI GPT-4",
-            type="password",
-            key="openai_key",
-            placeholder="sk-...",
-            help="For GPT-4 text generation"
-        )
-        
-        google_key = st.text_input(
-            "Google Gemini",
-            type="password",
-            key="google_key",
-            placeholder="AIza...",
-            help="For Gemini text generation"
-        )
-        
-        hf_key = st.text_input(
-            "HuggingFace",
-            type="password",
-            key="hf_key",
-            placeholder="hf_...",
-            help="For Llama-2 text generation"
-        )
-    
-    st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
-    st.markdown("<div style='border-top: 1px solid rgba(255,255,255,0.1); margin: 20px 0;'></div>", unsafe_allow_html=True)
-    
-    # Audio/Video Section
-    st.markdown("""
-    <div style='background: linear-gradient(135deg, rgba(236, 72, 153, 0.15), rgba(239, 68, 68, 0.15)); 
-                padding: 16px; border-radius: 12px; border: 1px solid rgba(236, 72, 153, 0.3); margin-bottom: 20px;'>
-        <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 12px;'>
-            <span style='font-size: 20px;'>🎵</span>
-            <span style='color: white; font-weight: 600; font-size: 15px;'>Audio/Video Generation</span>
-        </div>
-        <div style='color: #fbbf24; font-size: 11px; line-height: 1.5;'>
-            Choose your preferred TTS provider
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # TTS Provider Selection with custom styling
+    st.subheader("TTS Provider")
     tts_choice = st.radio(
-        "Select Provider:",
-        ["OpenAI TTS (Recommended)", "ElevenLabs", "D-ID Video"],
-        help="Choose the service for converting text to audio/video",
-        label_visibility="visible"
+        "Select Audio/Video Provider:",
+        ["OpenAI TTS", "ElevenLabs", "D-ID Video"]
     )
     
-    st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
-    
-    # Show appropriate key input based on selection
-    if tts_choice == "OpenAI TTS (Recommended)":
-        if openai_key:
-            openai_tts_key = openai_key
-            st.markdown("""
-            <div style='background: rgba(16, 185, 129, 0.15); padding: 12px; border-radius: 8px; 
-                        border-left: 3px solid #10b981; margin-bottom: 15px;'>
-                <div style='color: #6ee7b7; font-size: 12px; display: flex; align-items: center; gap: 6px;'>
-                    <span>✓</span> Reusing OpenAI key from above
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-        else:
-            st.markdown("""
-            <div style='background: rgba(59, 130, 246, 0.1); padding: 10px; border-radius: 8px; 
-                        margin-bottom: 12px; border-left: 3px solid #3b82f6;'>
-                <div style='color: #93c5fd; font-size: 11px;'>
-                    ℹ️ Need OpenAI key for TTS
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            openai_tts_key = st.text_input(
-                "OpenAI API Key",
-                type="password",
-                key="openai_tts_key",
-                placeholder="sk-...",
-                help="Same as OpenAI GPT-4 key"
-            )
-    
+    if tts_choice == "OpenAI TTS":
+        tts_key = openai_key
+        st.caption("Uses OpenAI API key above")
     elif tts_choice == "ElevenLabs":
+        tts_key = st.text_input("ElevenLabs API Key", type="password", key="elevenlabs_key")
+    else:
+        tts_key = st.text_input("D-ID API Key", type="password", key="did_key")
+    
+    st.divider()
+    
+    with st.expander("📚 How to Get Keys"):
         st.markdown("""
-        <div style='background: rgba(59, 130, 246, 0.1); padding: 10px; border-radius: 8px; 
-                    margin-bottom: 12px; border-left: 3px solid #3b82f6;'>
-            <div style='color: #93c5fd; font-size: 11px;'>
-                ℹ️ Professional voice synthesis
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        elevenlabs_key = st.text_input(
-            "ElevenLabs API Key",
-            type="password",
-            key="elevenlabs_key",
-            placeholder="Enter your ElevenLabs key",
-            help="Get from elevenlabs.io"
-        )
-    
-    else:  # D-ID Video
-        st.markdown("""
-        <div style='background: rgba(59, 130, 246, 0.1); padding: 10px; border-radius: 8px; 
-                    margin-bottom: 12px; border-left: 3px solid #3b82f6;'>
-            <div style='color: #93c5fd; font-size: 11px;'>
-                ℹ️ AI avatar video generation
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        did_key = st.text_input(
-            "D-ID API Key",
-            type="password",
-            key="did_key",
-            placeholder="Enter your D-ID key",
-            help="Get from d-id.com"
-        )
-    
-    # Help Section
-    st.markdown("<div style='height: 30px;'></div>", unsafe_allow_html=True)
-    
-    with st.expander("📚 How to Get API Keys", expanded=False):
-        st.markdown("""
-        <div style='font-size: 12px; color: #c7b3ff; line-height: 1.8;'>
-            <div style='margin-bottom: 12px;'>
-                <div style='color: #8b5cf6; font-weight: 600; margin-bottom: 6px;'>🔮 Claude (Primary)</div>
-                1. Visit <a href='https://console.anthropic.com' target='_blank' style='color: #a78bfa;'>console.anthropic.com</a><br>
-                2. Sign up / Log in<br>
-                3. Go to API Keys section<br>
-                4. Create new key
-            </div>
-            
-            <div style='margin-bottom: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);'>
-                <div style='color: #10b981; font-weight: 600; margin-bottom: 6px;'>🤖 OpenAI</div>
-                Visit <a href='https://platform.openai.com/api-keys' target='_blank' style='color: #a78bfa;'>platform.openai.com</a>
-            </div>
-            
-            <div style='margin-bottom: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);'>
-                <div style='color: #f59e0b; font-weight: 600; margin-bottom: 6px;'>✨ Gemini</div>
-                Visit <a href='https://makersuite.google.com/app/apikey' target='_blank' style='color: #a78bfa;'>makersuite.google.com</a>
-            </div>
-            
-            <div style='margin-bottom: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);'>
-                <div style='color: #ec4899; font-weight: 600; margin-bottom: 6px;'>🔊 ElevenLabs</div>
-                Visit <a href='https://elevenlabs.io' target='_blank' style='color: #a78bfa;'>elevenlabs.io</a>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    # Stats/Info at bottom
-    st.markdown("""
-    <div style='margin-top: 30px; padding: 15px; background: rgba(255,255,255,0.03); 
-                border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);'>
-        <div style='color: #6ee7b7; font-size: 11px; font-weight: 600; margin-bottom: 8px;'>
-            💡 Quick Tips
-        </div>
-        <div style='color: #a78bfa; font-size: 10px; line-height: 1.6;'>
-            • Keys are stored in browser only<br>
-            • Start with Claude + OpenAI TTS<br>
-            • Add more models as needed<br>
-            • All data is secure & private
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+- **Claude**: console.anthropic.com
+- **OpenAI**: platform.openai.com/api-keys
+- **Gemini**: makersuite.google.com/app/apikey
+- **HuggingFace**: huggingface.co/settings/tokens
+- **ElevenLabs**: elevenlabs.io
+- **D-ID**: d-id.com
+        """)
 
 # -------------------------------------------------------
-# Main Header
+# Main Content
 # -------------------------------------------------------
-st.markdown("""
-<div class='main-header'>
-    <div style='display: flex; align-items: center; gap: 20px;'>
-        <div class='header-icon'>🎙️</div>
-        <div>
-            <h1 class='main-title'>Enterprise AI Agent</h1>
-            <p class='subtitle'>Powered by Claude AI → Convert to Audio/Video</p>
-        </div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-# -------------------------------------------------------
-# Two-Column Layout for Steps
-# -------------------------------------------------------
-col1, col2 = st.columns(2, gap="large")
+col1, col2 = st.columns(2)
 
 with col1:
-    st.markdown("""
-    <div class='step-card'>
-        <div class='section-title'>
-            <span class='section-icon'>🧠</span>
-            Step 1: AI Text Generation
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.subheader("📝 Step 1: Text Generation")
     
-    # Determine available models based on API keys
     available_models = []
     if claude_key:
-        available_models.append("claude")
+        available_models.append("Claude")
     if openai_key:
-        available_models.append("openai")
+        available_models.append("OpenAI GPT-4")
     if google_key:
-        available_models.append("gemini")
+        available_models.append("Gemini")
     if hf_key:
-        available_models.append("huggingface")
+        available_models.append("Llama-2")
     
-    # Default to claude if available
     if not available_models:
-        st.warning("⚠️ Please enter at least one LLM API key in the sidebar")
-        available_models = ["claude"]  # Show option even if no key
+        st.warning("Add at least one LLM API key in sidebar")
+        available_models = ["Claude"]
     
-    llm_model = st.selectbox(
-        "Select LLM Model",
-        available_models,
-        format_func=lambda x: {
-            "claude": "🔮 Claude 3.5 Sonnet (Recommended)",
-            "openai": "🤖 OpenAI GPT-4",
-            "gemini": "✨ Google Gemini",
-            "huggingface": "🤗 Llama-2"
-        }.get(x, x)
-    )
-    
+    llm_model = st.selectbox("Select Model", available_models)
     enhance_mode = st.selectbox(
         "Enhancement Mode",
-        ["improve", "script", "narration", "podcast", "story", "professional", "casual"],
-        format_func=lambda x: {
-            "improve": "✍️ Improve & Enhance",
-            "script": "🎬 Video Script",
-            "narration": "📖 Narration Style",
-            "podcast": "🎙️ Podcast Intro",
-            "story": "📚 Expand into Story",
-            "professional": "💼 Professional Tone",
-            "casual": "😊 Casual & Friendly"
-        }[x]
+        ["improve", "script", "narration", "podcast", "story", "professional", "casual"]
     )
 
 with col2:
-    st.markdown("""
-    <div class='step-card'>
-        <div class='section-title'>
-            <span class='section-icon'>🎵</span>
-            Step 2: Audio/Video Generation
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.subheader("🎵 Step 2: Audio/Video")
     
-    # Map radio choice to model name
-    tts_model_map = {
-        "OpenAI TTS (Recommended)": "openai-tts",
-        "ElevenLabs": "elevenlabs",
-        "D-ID Video": "did"
-    }
-    tts_model = tts_model_map[tts_choice]
-    
-    st.info(f"📌 Using: **{tts_choice}**")
+    st.info(f"Provider: **{tts_choice}**")
     
     voices = {
-        "openai-tts": ["alloy", "echo", "fable", "onyx", "nova", "shimmer"],
-        "elevenlabs": ["Rachel", "Drew", "Clyde", "Paul", "Domi", "Dave"],
-        "did": ["en-US-JennyNeural", "en-US-GuyNeural"]
+        "OpenAI TTS": ["alloy", "echo", "fable", "onyx", "nova", "shimmer"],
+        "ElevenLabs": ["Rachel", "Drew", "Clyde", "Paul", "Domi", "Dave"],
+        "D-ID Video": ["en-US-JennyNeural", "en-US-GuyNeural"]
     }
     
-    voice = st.selectbox("Voice Selection", voices[tts_model])
+    voice = st.selectbox("Voice", voices[tts_choice])
 
-st.markdown("<br>", unsafe_allow_html=True)
+st.divider()
 
 # -------------------------------------------------------
-# Text Input Section
+# Text Input
 # -------------------------------------------------------
-st.markdown("""
-<div class='glass-card'>
-    <div class='section-title'>
-        <span class='section-icon'>✏️</span>
-        Enter Your Text
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
+st.subheader("✏️ Your Text")
 input_text = st.text_area(
-    "",
+    "Enter text or topic:",
     height=150,
-    placeholder="Enter your text or topic here... For example: 'Create a professional introduction about AI technology' or 'Write a casual podcast intro about climate change'",
-    label_visibility="collapsed"
+    placeholder="e.g., Create a professional introduction about AI technology"
 )
 
-st.caption(f"📝 {len(input_text)} characters")
+st.caption(f"{len(input_text)} characters")
 
 # -------------------------------------------------------
 # Enhancement Prompts
@@ -717,14 +221,21 @@ enhance_prompts = {
 }
 
 # -------------------------------------------------------
-# LLM Generation Function
+# LLM Function
 # -------------------------------------------------------
 def generate_with_llm(text, model, keys, mode):
     prompt = f"{enhance_prompts[mode]}\n\nOriginal text:\n{text}"
     
-    if model == "claude":
+    model_key = {
+        "Claude": "claude",
+        "OpenAI GPT-4": "openai",
+        "Gemini": "google",
+        "Llama-2": "huggingface"
+    }[model]
+    
+    if model_key == "claude":
         if not keys.get("claude"):
-            raise Exception("Claude API key required. Please add it in the sidebar.")
+            raise Exception("Claude API key required")
         
         r = requests.post(
             "https://api.anthropic.com/v1/messages",
@@ -739,13 +250,12 @@ def generate_with_llm(text, model, keys, mode):
                 "messages": [{"role": "user", "content": prompt}]
             }
         )
-        
         data = r.json()
         if "error" in data:
-            raise Exception(f"Claude Error: {data['error'].get('message', 'Unknown error')}")
+            raise Exception(f"Claude Error: {data['error'].get('message', 'Unknown')}")
         return data["content"][0]["text"]
     
-    elif model == "openai":
+    elif model_key == "openai":
         if not keys.get("openai"):
             raise Exception("OpenAI API key required")
         
@@ -757,31 +267,26 @@ def generate_with_llm(text, model, keys, mode):
             },
             json={
                 "model": "gpt-4o-mini",
-                "messages": [
-                    {"role": "system", "content": "You are a text enhancement AI."},
-                    {"role": "user", "content": prompt},
-                ],
+                "messages": [{"role": "user", "content": prompt}],
             },
         )
-        
         data = r.json()
         if "error" in data:
             raise Exception(f"OpenAI Error: {data['error']['message']}")
         return data["choices"][0]["message"]["content"]
     
-    elif model == "gemini":
+    elif model_key == "google":
         if not keys.get("google"):
             raise Exception("Gemini API key required")
         
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={keys['google']}"
         r = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]})
-        
         data = r.json()
         if "error" in data:
             raise Exception(f"Gemini Error: {data['error']['message']}")
         return data["candidates"][0]["content"]["parts"][0]["text"]
     
-    elif model == "huggingface":
+    elif model_key == "huggingface":
         if not keys.get("huggingface"):
             raise Exception("HuggingFace key required")
         
@@ -790,20 +295,19 @@ def generate_with_llm(text, model, keys, mode):
             headers={"Authorization": f"Bearer {keys['huggingface']}"},
             json={"inputs": prompt},
         )
-        
         data = r.json()
         if isinstance(data, dict) and "error" in data:
             raise Exception(f"HuggingFace Error: {data['error']}")
         return data[0]["generated_text"]
 
 # -------------------------------------------------------
-# Media Generation Function
+# Media Function
 # -------------------------------------------------------
-def generate_media(text, model, voice, keys):
-    if model == "openai-tts":
-        api_key = keys.get("openai") or keys.get("openai_tts")
+def generate_media(text, provider, voice, keys):
+    if provider == "OpenAI TTS":
+        api_key = keys.get("openai")
         if not api_key:
-            raise Exception("OpenAI API key required for TTS")
+            raise Exception("OpenAI API key required")
         
         r = requests.post(
             "https://api.openai.com/v1/audio/speech",
@@ -819,7 +323,7 @@ def generate_media(text, model, voice, keys):
         
         return {"type": "audio", "content": r.content}
     
-    elif model == "elevenlabs":
+    elif provider == "ElevenLabs":
         if not keys.get("elevenlabs"):
             raise Exception("ElevenLabs API key required")
         
@@ -843,7 +347,7 @@ def generate_media(text, model, voice, keys):
         
         return {"type": "audio", "content": r.content}
     
-    elif model == "did":
+    elif provider == "D-ID Video":
         if not keys.get("did"):
             raise Exception("D-ID API key required")
         
@@ -875,13 +379,10 @@ def generate_media(text, model, voice, keys):
 # -------------------------------------------------------
 # Generate Button
 # -------------------------------------------------------
-st.markdown("<br>", unsafe_allow_html=True)
-
-if st.button("✨ Generate AI Content → Audio/Video"):
+if st.button("🚀 Generate", type="primary", use_container_width=True):
     if not input_text.strip():
-        st.error("⚠️ Please enter some text first")
+        st.error("Please enter some text")
     else:
-        # Collect only provided API keys
         keys = {}
         if claude_key:
             keys["claude"] = claude_key
@@ -892,91 +393,49 @@ if st.button("✨ Generate AI Content → Audio/Video"):
         if hf_key:
             keys["huggingface"] = hf_key
         
-        # Add TTS keys
-        if tts_model == "openai-tts":
-            if 'openai_tts_key' in locals():
-                keys["openai_tts"] = openai_tts_key
-        elif tts_model == "elevenlabs" and 'elevenlabs_key' in locals():
-            keys["elevenlabs"] = elevenlabs_key
-        elif tts_model == "did" and 'did_key' in locals():
-            keys["did"] = did_key
+        if tts_choice == "OpenAI TTS":
+            keys["openai"] = openai_key
+        elif tts_choice == "ElevenLabs":
+            keys["elevenlabs"] = tts_key
+        elif tts_choice == "D-ID Video":
+            keys["did"] = tts_key
         
         try:
-            # Step 1: Generate Enhanced Text
-            with st.spinner("🧠 Generating enhanced text with AI..."):
+            with st.spinner("Generating enhanced text..."):
                 enhanced = generate_with_llm(input_text, llm_model, keys, enhance_mode)
                 st.session_state.generated_text = enhanced
             
-            st.success("✅ Text enhanced successfully!")
+            st.success("Text enhanced!")
             
-            # Step 2: Generate Media
-            with st.spinner("🎙️ Converting to audio/video..."):
-                media = generate_media(enhanced, tts_model, voice, keys)
+            with st.spinner("Converting to audio/video..."):
+                media = generate_media(enhanced, tts_choice, voice, keys)
                 st.session_state.media_result = media
             
-            st.success("✅ Media generated successfully!")
+            st.success("Media generated!")
             
-            # Log usage (anonymous)
-            media_url = media.get('url', None) if media.get('type') == 'video' else None
-            log_usage(session_id, f"{llm_model}+{tts_model}", input_text, enhanced, media_url)
+            log_usage(session_id, f"{llm_model}+{tts_choice}", input_text, enhanced)
             
         except Exception as e:
-            st.error(f"❌ Error: {str(e)}")
+            st.error(f"Error: {str(e)}")
+
+st.divider()
 
 # -------------------------------------------------------
-# Display Results
+# Results
 # -------------------------------------------------------
 if st.session_state.generated_text:
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("""
-    <div class='glass-card'>
-        <div class='section-title'>
-            <span class='section-icon'>🧠</span>
-            AI Enhanced Text
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.text_area("", st.session_state.generated_text, height=180, label_visibility="collapsed", disabled=True)
+    st.subheader("📄 Enhanced Text")
+    st.text_area("", st.session_state.generated_text, height=150, disabled=True)
 
 if st.session_state.media_result:
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("""
-    <div class='glass-card'>
-        <div class='section-title'>
-            <span class='section-icon'>🎵</span>
-            Generated Content
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    
+    st.subheader("🎵 Generated Media")
     media = st.session_state.media_result
     
     if media["type"] == "audio":
         st.audio(media["content"], format="audio/mp3")
-        st.download_button(
-            "⬇️ Download Audio",
-            media["content"],
-            "generated_audio.mp3",
-            "audio/mp3"
-        )
-    
+        st.download_button("⬇️ Download Audio", media["content"], "audio.mp3", "audio/mp3")
     elif media["type"] == "video":
         if media.get("url"):
             st.video(media["url"])
-            st.markdown(f"[📥 Download Video]({media['url']})")
         else:
-            st.error("❌ D-ID returned no video URL")
-
-# -------------------------------------------------------
-# Footer
-# -------------------------------------------------------
-st.markdown("""
-<div class='footer'>
-    <div style='font-weight: 600; font-size: 16px; margin-bottom: 8px;'>🚀 Enterprise AI Agent</div>
-    <div>Built with ❤️ for enterprise use • Powered by Claude AI</div>
-    <div style='margin-top: 12px; font-size: 12px; opacity: 0.7;'>
-        Claude • OpenAI • Gemini • ElevenLabs • D-ID
-    </div>
-</div>
-""", unsafe_allow_html=True)
+            st.error("No video URL returned")
