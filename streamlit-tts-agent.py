@@ -338,6 +338,8 @@ if 'selected_llm' not in st.session_state:
     st.session_state.selected_llm = "Claude 3.5 Sonnet"
 if 'selected_tts' not in st.session_state:
     st.session_state.selected_tts = "OpenAI TTS"
+if 'show_settings' not in st.session_state:
+    st.session_state.show_settings = False
 
 session_id = get_session_id()
 
@@ -425,6 +427,10 @@ with st.sidebar:
     
     st.markdown("---")
     
+    # Settings Button
+    if st.button("⚙️ Settings", use_container_width=True, key="settings_btn"):
+        st.session_state.show_settings = True
+    
     with st.expander("📚 Help"):
         st.markdown("""
 **Get API Keys:**
@@ -447,6 +453,91 @@ st.markdown("""
     <p class="page-subtitle">Transform text into engaging audio & video content</p>
 </div>
 """, unsafe_allow_html=True)
+
+# Settings Modal
+if st.session_state.show_settings:
+    st.markdown("""
+    <div class="card-section" style="border: 2px solid #667eea; background: #ede9fe;">
+        <div class="section-title">
+            <span class="section-icon">⚙️</span>
+            Settings & Configuration
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    settings_col1, settings_col2 = st.columns(2, gap="large")
+    
+    with settings_col1:
+        st.markdown("### 🧠 LLM Models")
+        
+        st.subheader("Free Models")
+        st.info("🆓 No API cost - Good for testing")
+        if st.button("🦙 HuggingFace (Llama-2)", use_container_width=True):
+            st.session_state.selected_llm = "HuggingFace (Llama-2)"
+        if st.button("⚡ Groq (LLaMA)", use_container_width=True):
+            st.session_state.selected_llm = "Groq (LLaMA)"
+        
+        st.subheader("Paid Models")
+        st.info("💎 Fast & Powerful")
+        if st.button("🔮 Claude 3.5 Sonnet", use_container_width=True):
+            st.session_state.selected_llm = "Claude 3.5 Sonnet"
+        if st.button("🤖 GPT-4o", use_container_width=True):
+            st.session_state.selected_llm = "GPT-4o"
+        
+        st.success(f"✓ Current: {st.session_state.selected_llm}")
+    
+    with settings_col2:
+        st.markdown("### 🎵 Audio/Video Providers")
+        
+        st.subheader("Choose Provider")
+        if st.button("🔊 OpenAI TTS", use_container_width=True):
+            st.session_state.selected_tts = "OpenAI TTS"
+        if st.button("🎙️ ElevenLabs", use_container_width=True):
+            st.session_state.selected_tts = "ElevenLabs"
+        if st.button("🎬 D-ID Video", use_container_width=True):
+            st.session_state.selected_tts = "D-ID Video"
+        
+        st.success(f"✓ Current: {st.session_state.selected_tts}")
+    
+    st.divider()
+    
+    st.markdown("### 🔑 API Keys Management")
+    
+    api_col1, api_col2 = st.columns(2, gap="large")
+    
+    with api_col1:
+        st.subheader("Text Generation Keys")
+        claude_key_settings = st.text_input("Claude API Key", type="password", placeholder="sk-ant-...", key="claude_settings")
+        openai_key_settings = st.text_input("OpenAI API Key", type="password", placeholder="sk-...", key="openai_settings")
+        hf_key_settings = st.text_input("HuggingFace Key", type="password", placeholder="hf_...", key="hf_settings")
+        groq_key_settings = st.text_input("Groq API Key", type="password", placeholder="gsk_...", key="groq_settings")
+    
+    with api_col2:
+        st.subheader("Audio/Video Keys")
+        tts_key_settings = st.text_input("TTS/D-ID API Key", type="password", placeholder="Enter key", key="tts_settings")
+        
+        st.subheader("Instructions")
+        st.markdown("""
+- **Claude**: https://console.anthropic.com/keys
+- **OpenAI**: https://platform.openai.com/api-keys
+- **HuggingFace**: https://huggingface.co/settings/tokens
+- **Groq**: https://console.groq.com
+- **ElevenLabs**: https://elevenlabs.io
+- **D-ID**: https://www.d-id.com/api
+        """)
+    
+    col1_btn, col2_btn = st.columns(2)
+    with col1_btn:
+        if st.button("✅ Save Settings", use_container_width=True, type="primary"):
+            st.session_state.show_settings = False
+            st.success("Settings saved!")
+            st.rerun()
+    with col2_btn:
+        if st.button("❌ Close Settings", use_container_width=True):
+            st.session_state.show_settings = False
+            st.rerun()
+    
+    st.divider()
 
 # Two Column Layout
 col1, col2 = st.columns(2, gap="large")
