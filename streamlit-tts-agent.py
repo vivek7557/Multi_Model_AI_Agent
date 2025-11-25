@@ -1,801 +1,481 @@
-import streamlit as st
-import requests
-import base64
-import sqlite3
-import logging
-import secrets
-
-# -------------------------------------------------------
-# Configuration
-# -------------------------------------------------------
-DB_PATH = "enterprise_ai_agent.db"
-LOG_LEVEL = logging.INFO
-LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
-
-logging.basicConfig(level=LOG_LEVEL, format=LOG_FORMAT)
-logger = logging.getLogger(__name__)
-
-# -------------------------------------------------------
-# Database
-# -------------------------------------------------------
-def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS usage_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            session_id TEXT NOT NULL,
-            service_type TEXT NOT NULL,
-            input_text TEXT,
-            output_text TEXT,
-            media_url TEXT,
-            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            ip_address TEXT
-        )
-    ''')
-    conn.commit()
-    conn.close()
-
-def get_session_id():
-    if 'session_id' not in st.session_state:
-        st.session_state.session_id = secrets.token_hex(16)
-    return st.session_state.session_id
-
-def log_usage(session_id, service_type, input_text, output_text):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute('''
-        INSERT INTO usage_logs (session_id, service_type, input_text, output_text, ip_address)
-        VALUES (?, ?, ?, ?, ?)
-    ''', (session_id, service_type, input_text, output_text, "unknown"))
-    conn.commit()
-    conn.close()
-
-# -------------------------------------------------------
-# Page Config
-# -------------------------------------------------------
-st.set_page_config(page_title="AI Content Generator", layout="wide", initial_sidebar_state="expanded")
-
-# -------------------------------------------------------
-# CSS - Modern Sidebar + Main Layout
-# -------------------------------------------------------
-st.markdown("""
-<style>
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-body {
-    background: #ffffff;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-}
-
-.stApp {
-    background: #ffffff;
-}
-
-[data-testid="stMainBlockContainer"] {
-    padding: 0;
-}
-
-/* SIDEBAR STYLING */
-[data-testid="stSidebar"] {
-    background: #f8f9fb;
-    border-right: 1px solid #e8eef7;
-    padding: 0 !important;
-}
-
-[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
-    gap: 0;
-}
-
-.sidebar-header {
-    padding: 24px 20px;
-    border-bottom: 1px solid #e8eef7;
-}
-
-.sidebar-header h2 {
-    margin: 0;
-    font-size: 16px;
-    font-weight: 700;
-    color: #1a1a1a;
-}
-
-.sidebar-header p {
-    margin: 4px 0 0 0;
-    font-size: 12px;
-    color: #999;
-}
-
-/* Sidebar Sections */
-.sidebar-section {
-    padding: 20px;
-    border-bottom: 1px solid #f0f0f0;
-}
-
-.sidebar-section-title {
-    font-size: 12px;
-    font-weight: 700;
-    text-transform: uppercase;
-    color: #666;
-    letter-spacing: 0.5px;
-    margin-bottom: 12px;
-}
-
-.sidebar-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px;
-    margin-bottom: 8px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 14px;
-    color: #333;
-    transition: all 0.2s;
-    border: 1px solid transparent;
-}
-
-.sidebar-item:hover {
-    background: #f0f0f0;
-    border-color: #e0e0e0;
-}
-
-.sidebar-item.active {
-    background: #ede9fe;
-    color: #667eea;
-    border-color: #d8d3fc;
-    font-weight: 600;
-}
-
-.sidebar-icon {
-    width: 20px;
-    height: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-}
-
-/* MAIN CONTENT */
-[data-testid="stMainBlockContainer"] {
-    padding: 40px 60px;
-    background: linear-gradient(135deg, #ffffff 0%, #f8f9fb 100%);
-    min-height: 100vh;
-}
-
-.page-header {
-    margin-bottom: 40px;
-}
-
-.page-title {
-    font-size: 32px;
-    font-weight: 700;
-    color: #1a1a1a;
-    margin: 0 0 8px 0;
-}
-
-.page-subtitle {
-    font-size: 14px;
-    color: #999;
-    margin: 0;
-}
-
-/* Two Column Grid */
-.content-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 32px;
-    margin-bottom: 32px;
-}
-
-.card-section {
-    background: white;
-    border: 1px solid #e8eef7;
-    border-radius: 12px;
-    padding: 28px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-    transition: all 0.3s;
-}
-
-.card-section:hover {
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-    border-color: #d8d3fc;
-}
-
-.section-title {
-    font-size: 16px;
-    font-weight: 700;
-    color: #1a1a1a;
-    margin-bottom: 16px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.section-icon {
-    font-size: 18px;
-}
-
-/* Input Styles */
-.stTextInput > div > div > input,
-.stTextArea > div > div > textarea,
-.stSelectbox > div > div > select {
-    background-color: #f8f9fb !important;
-    border: 1px solid #e8eef7 !important;
-    color: #1a1a1a !important;
-    border-radius: 8px !important;
-    padding: 12px !important;
-    font-size: 14px !important;
-    transition: all 0.2s !important;
-}
-
-.stTextInput > div > div > input:focus,
-.stTextArea > div > div > textarea:focus,
-.stSelectbox > div > div > select:focus {
-    border-color: #667eea !important;
-    background-color: #ffffff !important;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.08) !important;
-}
-
-/* Button */
-.stButton > button {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-    color: white !important;
-    border: none !important;
-    border-radius: 8px !important;
-    padding: 14px 28px !important;
-    font-size: 16px !important;
-    font-weight: 600 !important;
-    cursor: pointer;
-    width: 100%;
-    transition: all 0.3s;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-}
-
-.stButton > button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-}
-
-.stDownloadButton > button {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-}
-
-/* Messages */
-.stSuccess {
-    background: #f0fdf4 !important;
-    color: #166534 !important;
-    border: 1px solid #dcfce7 !important;
-    border-radius: 8px !important;
-    padding: 12px 16px !important;
-}
-
-.stError {
-    background: #fef2f2 !important;
-    color: #991b1b !important;
-    border: 1px solid #fee2e2 !important;
-    border-radius: 8px !important;
-    padding: 12px 16px !important;
-}
-
-.stInfo {
-    background: #eff6ff !important;
-    color: #0c2d6b !important;
-    border: 1px solid #dbeafe !important;
-    border-radius: 8px !important;
-    padding: 12px 16px !important;
-}
-
-/* Divider */
-hr {
-    border: none;
-    border-top: 1px solid #e8eef7;
-    margin: 24px 0;
-}
-
-/* Audio */
-audio {
-    width: 100%;
-    border-radius: 8px;
-    margin: 16px 0;
-}
-
-/* Text Area */
-.stTextArea > div > div > textarea {
-    min-height: 200px !important;
-}
-
-/* Hide Streamlit UI */
-#MainMenu { visibility: hidden; }
-footer { visibility: hidden; }
-header { visibility: hidden; }
-
-/* Responsive */
-@media (max-width: 1024px) {
-    .content-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    [data-testid="stMainBlockContainer"] {
-        padding: 24px 30px;
-    }
-}
-
-</style>
-""", unsafe_allow_html=True)
-
-init_db()
-
-if 'generated_text' not in st.session_state:
-    st.session_state.generated_text = ""
-if 'media_result' not in st.session_state:
-    st.session_state.media_result = None
-if 'selected_llm' not in st.session_state:
-    st.session_state.selected_llm = "Claude 3.5 Sonnet"
-if 'selected_tts' not in st.session_state:
-    st.session_state.selected_tts = "OpenAI TTS"
-if 'show_settings' not in st.session_state:
-    st.session_state.show_settings = False
-
-session_id = get_session_id()
-
-# -------------------------------------------------------
-# SIDEBAR
-# -------------------------------------------------------
-with st.sidebar:
-    # Header
-    st.markdown("""
-    <div class="sidebar-header">
-        <h2>🤖 AI Generator</h2>
-        <p>Community Edition</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # LLM Models
-    st.markdown("""
-    <div class="sidebar-section">
-        <div class="sidebar-section-title">📝 Text Generation</div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    llm_models = {
-        "Free": {
-            "HuggingFace (Llama-2)": {"key": "hf", "icon": "🦙"},
-            "Groq (LLaMA)": {"key": "groq", "icon": "⚡"}
-        },
-        "Paid": {
-            "Claude 3.5 Sonnet": {"key": "claude", "icon": "🔮"},
-            "GPT-4o": {"key": "openai", "icon": "🤖"}
-        }
-    }
-    
-    selected_llm = ""
-    for category, models in llm_models.items():
-        for model_name, model_info in models.items():
-            active = model_name == st.session_state.selected_llm
-            css_class = "active" if active else ""
-            
-            st.markdown(f"""
-            <div class="sidebar-item {css_class}" onclick="alert('{model_name}')">
-                <span class="sidebar-icon">{model_info['icon']}</span>
-                <span>{model_name}</span>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            if st.button(model_name, key=f"llm_{model_name}", use_container_width=True):
-                st.session_state.selected_llm = model_name
-    
-    st.markdown('<div style="margin: 12px 0;"></div>', unsafe_allow_html=True)
-    
-    # TTS Providers
-    st.markdown("""
-    <div class="sidebar-section">
-        <div class="sidebar-section-title">🎵 Audio/Video</div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    tts_models = {
-        "OpenAI TTS": {"icon": "🔊"},
-        "ElevenLabs": {"icon": "🎙️"},
-        "D-ID Video": {"icon": "🎬"}
-    }
-    
-    for tts_name, tts_info in tts_models.items():
-        active = tts_name == st.session_state.selected_tts
-        
-        if st.button(tts_name, key=f"tts_{tts_name}", use_container_width=True):
-            st.session_state.selected_tts = tts_name
-    
-    st.markdown("---")
-    
-    # API Keys Section
-    st.markdown("""
-    <div class="sidebar-section">
-        <div class="sidebar-section-title">🔑 API Keys</div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    claude_key = st.text_input("Claude", type="password", placeholder="sk-ant-...", label_visibility="collapsed")
-    openai_key = st.text_input("OpenAI", type="password", placeholder="sk-...", label_visibility="collapsed")
-    hf_key = st.text_input("HuggingFace", type="password", placeholder="hf_...", label_visibility="collapsed")
-    groq_key = st.text_input("Groq", type="password", placeholder="gsk_...", label_visibility="collapsed")
-    tts_key = st.text_input("TTS Key", type="password", placeholder="Enter key", label_visibility="collapsed")
-    
-    st.markdown("---")
-    
-    # Settings Button
-    if st.button("⚙️ Settings", use_container_width=True, key="settings_btn"):
-        st.session_state.show_settings = True
-    
-    with st.expander("📚 Help"):
-        st.markdown("""
-**Get API Keys:**
-- Claude: console.anthropic.com
-- OpenAI: platform.openai.com
-- HuggingFace: huggingface.co/settings/tokens
-- Groq: console.groq.com
-- ElevenLabs: elevenlabs.io
-- D-ID: d-id.com
-        """)
-
-# -------------------------------------------------------
-# MAIN CONTENT
-# -------------------------------------------------------
-
-# Header
-st.markdown("""
-<div class="page-header">
-    <h1 class="page-title">✨ AI Content Generator</h1>
-    <p class="page-subtitle">Transform text into engaging audio & video content</p>
-</div>
-""", unsafe_allow_html=True)
-
-# Settings Modal
-if st.session_state.show_settings:
-    st.markdown("""
-    <div class="card-section" style="border: 2px solid #667eea; background: #ede9fe;">
-        <div class="section-title">
-            <span class="section-icon">⚙️</span>
-            Settings & Configuration
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    settings_col1, settings_col2 = st.columns(2, gap="large")
-    
-    with settings_col1:
-        st.markdown("### 🧠 LLM Models")
-        
-        st.subheader("Free Models")
-        st.info("🆓 No API cost - Good for testing")
-        if st.button("🦙 HuggingFace (Llama-2)", use_container_width=True):
-            st.session_state.selected_llm = "HuggingFace (Llama-2)"
-        if st.button("⚡ Groq (LLaMA)", use_container_width=True):
-            st.session_state.selected_llm = "Groq (LLaMA)"
-        
-        st.subheader("Paid Models")
-        st.info("💎 Fast & Powerful")
-        if st.button("🔮 Claude 3.5 Sonnet", use_container_width=True):
-            st.session_state.selected_llm = "Claude 3.5 Sonnet"
-        if st.button("🤖 GPT-4o", use_container_width=True):
-            st.session_state.selected_llm = "GPT-4o"
-        
-        st.success(f"✓ Current: {st.session_state.selected_llm}")
-    
-    with settings_col2:
-        st.markdown("### 🎵 Audio/Video Providers")
-        
-        st.subheader("Choose Provider")
-        if st.button("🔊 OpenAI TTS", use_container_width=True):
-            st.session_state.selected_tts = "OpenAI TTS"
-        if st.button("🎙️ ElevenLabs", use_container_width=True):
-            st.session_state.selected_tts = "ElevenLabs"
-        if st.button("🎬 D-ID Video", use_container_width=True):
-            st.session_state.selected_tts = "D-ID Video"
-        
-        st.success(f"✓ Current: {st.session_state.selected_tts}")
-    
-    st.divider()
-    
-    st.markdown("### 🔑 API Keys Management")
-    
-    api_col1, api_col2 = st.columns(2, gap="large")
-    
-    with api_col1:
-        st.subheader("Text Generation Keys")
-        claude_key_settings = st.text_input("Claude API Key", type="password", placeholder="sk-ant-...", key="claude_settings")
-        openai_key_settings = st.text_input("OpenAI API Key", type="password", placeholder="sk-...", key="openai_settings")
-        hf_key_settings = st.text_input("HuggingFace Key", type="password", placeholder="hf_...", key="hf_settings")
-        groq_key_settings = st.text_input("Groq API Key", type="password", placeholder="gsk_...", key="groq_settings")
-    
-    with api_col2:
-        st.subheader("Audio/Video Keys")
-        tts_key_settings = st.text_input("TTS/D-ID API Key", type="password", placeholder="Enter key", key="tts_settings")
-        
-        st.subheader("Instructions")
-        st.markdown("""
-- **Claude**: https://console.anthropic.com/keys
-- **OpenAI**: https://platform.openai.com/api-keys
-- **HuggingFace**: https://huggingface.co/settings/tokens
-- **Groq**: https://console.groq.com
-- **ElevenLabs**: https://elevenlabs.io
-- **D-ID**: https://www.d-id.com/api
-        """)
-    
-    col1_btn, col2_btn = st.columns(2)
-    with col1_btn:
-        if st.button("✅ Save Settings", use_container_width=True, type="primary"):
-            st.session_state.show_settings = False
-            st.success("Settings saved!")
-            st.rerun()
-    with col2_btn:
-        if st.button("❌ Close Settings", use_container_width=True):
-            st.session_state.show_settings = False
-            st.rerun()
-    
-    st.divider()
-
-# Two Column Layout
-col1, col2 = st.columns(2, gap="large")
-
-with col1:
-    st.markdown("""
-    <div class="card-section">
-        <div class="section-title">
-            <span class="section-icon">🧠</span>
-            Text Generation
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    enhance_mode = st.selectbox(
-        "Enhancement Style",
-        ["improve", "script", "narration", "podcast", "story", "professional", "casual"],
-        format_func=lambda x: {
-            "improve": "✍️ Improve & Enhance",
-            "script": "🎬 Video Script",
-            "narration": "📖 Narration",
-            "podcast": "🎙️ Podcast Intro",
-            "story": "📚 Story",
-            "professional": "💼 Professional",
-            "casual": "😊 Casual"
-        }[x],
-        label_visibility="collapsed"
-    )
-
-with col2:
-    st.markdown("""
-    <div class="card-section">
-        <div class="section-title">
-            <span class="section-icon">🎵</span>
-            Audio/Video Settings
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    voices = {
-        "OpenAI TTS": ["alloy", "echo", "fable", "onyx", "nova", "shimmer"],
-        "ElevenLabs": ["Rachel", "Drew", "Clyde", "Paul", "Domi", "Dave"],
-        "D-ID Video": ["en-US-JennyNeural", "en-US-GuyNeural"]
-    }
-    
-    voice = st.selectbox(
-        "Voice Selection",
-        voices.get(st.session_state.selected_tts, voices["OpenAI TTS"]),
-        label_visibility="collapsed"
-    )
-
-st.markdown("---")
-
-# Text Input
-st.markdown("""
-<div class="card-section">
-    <div class="section-title">
-        <span class="section-icon">✏️</span>
-        Your Content
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-input_text = st.text_area(
-    "Enter text:",
-    height=200,
-    placeholder="Write or paste your content here...",
-    label_visibility="collapsed"
-)
-
-st.caption(f"📝 {len(input_text)} characters")
-
-st.markdown("---")
-
-# Enhancement Prompts
-enhance_prompts = {
-    "improve": "Improve writing and clarity.",
-    "script": "Convert this into a video script.",
-    "narration": "Rewrite in narrative storytelling style.",
-    "podcast": "Rewrite as a podcast intro.",
-    "story": "Expand into a fictional story.",
-    "professional": "Rewrite formally and professionally.",
-    "casual": "Rewrite casually and friendly."
-}
-
-# LLM Generation
-def generate_with_llm(text, model, keys, mode):
-    prompt = f"{enhance_prompts[mode]}\n\nOriginal text:\n{text}"
-    
-    if "Claude" in model:
-        if not keys.get("claude"):
-            raise Exception("Claude API key required")
-        r = requests.post(
-            "https://api.anthropic.com/v1/messages",
-            headers={
-                "x-api-key": keys["claude"],
-                "anthropic-version": "2023-06-01",
-                "Content-Type": "application/json"
-            },
-            json={
-                "model": "claude-3-5-sonnet-20241022",
-                "max_tokens": 1024,
-                "messages": [{"role": "user", "content": prompt}]
-            }
-        )
-        data = r.json()
-        if "error" in data:
-            raise Exception(f"Claude: {data['error'].get('message', 'Error')}")
-        return data["content"][0]["text"]
-    
-    elif "GPT-4o" in model:
-        if not keys.get("openai"):
-            raise Exception("OpenAI API key required")
-        r = requests.post(
-            "https://api.openai.com/v1/chat/completions",
-            headers={"Authorization": f"Bearer {keys['openai']}", "Content-Type": "application/json"},
-            json={"model": "gpt-4o-mini", "messages": [{"role": "user", "content": prompt}]}
-        )
-        data = r.json()
-        if "error" in data:
-            raise Exception(f"OpenAI: {data['error']['message']}")
-        return data["choices"][0]["message"]["content"]
-    
-    elif "HuggingFace" in model:
-        if not keys.get("huggingface"):
-            raise Exception("HuggingFace key required")
-        r = requests.post(
-            "https://api-inference.huggingface.co/models/meta-llama/Llama-2-70b-chat-hf",
-            headers={"Authorization": f"Bearer {keys['huggingface']}"},
-            json={"inputs": prompt}
-        )
-        data = r.json()
-        if isinstance(data, dict) and "error" in data:
-            raise Exception(f"HuggingFace: {data['error']}")
-        return data[0]["generated_text"]
-    
-    elif "Groq" in model:
-        if not keys.get("groq"):
-            raise Exception("Groq API key required")
-        r = requests.post(
-            "https://api.groq.com/openai/v1/chat/completions",
-            headers={"Authorization": f"Bearer {keys['groq']}", "Content-Type": "application/json"},
-            json={"model": "mixtral-8x7b-32768", "messages": [{"role": "user", "content": prompt}], "max_tokens": 1024}
-        )
-        data = r.json()
-        if "error" in data:
-            raise Exception(f"Groq: {data['error']['message']}")
-        return data["choices"][0]["message"]["content"]
-
-# Media Generation
-def generate_media(text, provider, voice, keys):
-    if provider == "OpenAI TTS":
-        api_key = keys.get("openai") or keys.get("tts_key")
-        if not api_key:
-            raise Exception("OpenAI API key required")
-        
-        r = requests.post(
-            "https://api.openai.com/v1/audio/speech",
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            json={"model": "tts-1-hd", "voice": voice, "input": text}
-        )
-        if r.status_code != 200:
-            raise Exception(f"TTS Error: {r.text}")
-        return {"type": "audio", "content": r.content}
-    
-    elif provider == "ElevenLabs":
-        if not keys.get("tts_key"):
-            raise Exception("ElevenLabs API key required")
-        
-        voice_ids = {"Rachel": "21m00Tcm4TlvDq8ikWAM", "Drew": "29vD33N1CtxCmqQRPOHJ", "Clyde": "2EiwWnXFnvU5JabPnv8n", "Paul": "5Q0t7uMcjvnagumLfvZi", "Domi": "AZnzlk1XvdvUeBnXmlld", "Dave": "CYw3kZ02Hs0563khs1Fj"}
-        
-        r = requests.post(
-            f"https://api.elevenlabs.io/v1/text-to-speech/{voice_ids[voice]}",
-            headers={"xi-api-key": keys["tts_key"]},
-            json={"text": text}
-        )
-        if r.status_code != 200:
-            raise Exception(f"ElevenLabs Error: {r.text}")
-        return {"type": "audio", "content": r.content}
-    
-    elif provider == "D-ID Video":
-        if not keys.get("tts_key"):
-            raise Exception("D-ID API key required")
-        
-        auth = base64.b64encode(f"{keys['tts_key']}:".encode()).decode()
-        r = requests.post(
-            "https://api.d-id.com/talks",
-            headers={"Authorization": f"Basic {auth}", "Content-Type": "application/json"},
-            json={"script": {"type": "text", "input": text, "voice_id": voice, "provider": {"type": "microsoft"}}, "source_url": "https://create-images-results.d-id.com/default-presenter.jpg"}
-        )
-        if r.status_code != 201:
-            raise Exception(f"D-ID Error: {r.text}")
-        return {"type": "video", "url": r.json().get("result_url")}
-
-# Generate Button
-if st.button("🚀 Generate Content", type="primary", use_container_width=True):
-    if not input_text.strip():
-        st.error("❌ Please enter some content")
-    else:
-        keys = {}
-        if claude_key:
-            keys["claude"] = claude_key
-        if openai_key:
-            keys["openai"] = openai_key
-        if hf_key:
-            keys["huggingface"] = hf_key
-        if groq_key:
-            keys["groq"] = groq_key
-        if tts_key:
-            keys["tts_key"] = tts_key
-        
-        try:
-            with st.spinner("🧠 Generating enhanced text..."):
-                enhanced = generate_with_llm(input_text, st.session_state.selected_llm, keys, enhance_mode)
-                st.session_state.generated_text = enhanced
-            st.success("✓ Text enhanced!")
-            
-            with st.spinner("🎵 Converting to audio/video..."):
-                media = generate_media(enhanced, st.session_state.selected_tts, voice, keys)
-                st.session_state.media_result = media
-            st.success("✓ Media generated!")
-            
-            log_usage(session_id, f"{st.session_state.selected_llm}+{st.session_state.selected_tts}", input_text, enhanced)
-            
-        except Exception as e:
-            st.error(f"❌ {str(e)}")
-
-st.markdown("---")
-
-# Results
-if st.session_state.generated_text:
-    st.markdown("""
-    <div class="card-section">
-        <div class="section-title">
-            <span class="section-icon">📄</span>
-            Enhanced Text
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    st.text_area("", st.session_state.generated_text, height=150, disabled=True, label_visibility="collapsed")
-
-if st.session_state.media_result:
-    st.markdown("""
-    <div class="card-section">
-        <div class="section-title">
-            <span class="section-icon">🎵</span>
-            Generated Media
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    media = st.session_state.media_result
-    
-    if media["type"] == "audio":
-        st.audio(media["content"], format="audio/mp3")
-        st.download_button("⬇ Download Audio", media["content"], "audio.mp3", "audio/mp3", use_container_width=True)
-    elif media["type"] == "video":
-        if media.get("url"):
-            st.video(media["url"])
-        else:
-            st.error("❌ No video URL returned")
+	import streamlit as st
+     2	import requests
+     3	import json
+     4	import base64
+     5	from io import BytesIO
+     6	import os
+     7	import hashlib
+     8	import time
+     9	from datetime import datetime, timedelta
+    10	import sqlite3
+    11	from contextlib import contextmanager
+    12	import logging
+    13	from typing import Dict, Any, Optional
+    14	import secrets
+    15	
+    16	# -------------------------------------------------------
+    17	# Configuration & Constants
+    18	# -------------------------------------------------------
+    19	DB_PATH = "enterprise_ai_agent.db"
+    20	LOG_LEVEL = logging.INFO
+    21	LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
+    22	
+    23	# Initialize logging
+    24	logging.basicConfig(level=LOG_LEVEL, format=LOG_FORMAT)
+    25	logger = logging.getLogger(__name__)
+    26	
+    27	# -------------------------------------------------------
+    28	# Database Setup (for usage tracking only)
+    29	# -------------------------------------------------------
+    30	def init_db():
+    31	    conn = sqlite3.connect(DB_PATH)
+    32	    c = conn.cursor()
+    33	    
+    34	    # Usage logs (no user authentication needed)
+    35	    c.execute('''
+    36	        CREATE TABLE IF NOT EXISTS usage_logs (
+    37	            id INTEGER PRIMARY KEY AUTOINCREMENT,
+    38	            session_id TEXT NOT NULL,
+    39	            service_type TEXT NOT NULL,
+    40	            input_text TEXT,
+    41	            output_text TEXT,
+    42	            media_url TEXT,
+    43	            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    44	            ip_address TEXT
+    45	        )
+    46	    ''')
+    47	    
+    48	    conn.commit()
+    49	    conn.close()
+    50	
+    51	# -------------------------------------------------------
+    52	# Session Management
+    53	# -------------------------------------------------------
+    54	def get_session_id():
+    55	    if 'session_id' not in st.session_state:
+    56	        st.session_state.session_id = secrets.token_hex(16)
+    57	    return st.session_state.session_id
+    58	
+    59	def log_usage(session_id: str, service_type: str, input_text: str, output_text: str, media_url: str = None, ip_address: str = "unknown"):
+    60	    conn = sqlite3.connect(DB_PATH)
+    61	    c = conn.cursor()
+    62	    c.execute('''
+    63	        INSERT INTO usage_logs (session_id, service_type, input_text, output_text, media_url, ip_address)
+    64	        VALUES (?, ?, ?, ?, ?, ?)
+    65	    ''', (session_id, service_type, input_text, output_text, media_url, ip_address))
+    66	    conn.commit()
+    67	    conn.close()
+    68	
+    69	# -------------------------------------------------------
+    70	# Enhanced Custom CSS with Modern Enterprise Design
+    71	# -------------------------------------------------------
+    72	st.markdown("""
+    73	<style>
+    74	    /* Import Google Fonts */
+    75	    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    76	    
+    77	    /* Global Styles */
+    78	    * {
+    79	        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    80	    }
+    81	    
+    82	    /* Main Background with Gradient Animation */
+    83	    .stApp {
+    84	        background: linear-gradient(-45deg, #1a0b2e, #2d1b69, #6b2d5c, #1a0b2e);
+    85	        background-size: 400% 400%;
+    86	        animation: gradientShift 15s ease infinite;
+    87	    }
+    88	    
+    89	    @keyframes gradientShift {
+    90	        0% { background-position: 0% 50%; }
+    91	        50% { background-position: 100% 50%; }
+    92	        100% { background-position: 0% 50%; }
+    93	    }
+    94	    
+    95	    /* Header Styling */
+    96	    .main-header {
+    97	        background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+    98	        backdrop-filter: blur(10px);
+    99	        border-radius: 20px;
+   100	        padding: 32px;
+   101	        margin-bottom: 30px;
+   102	        border: 1px solid rgba(255,255,255,0.2);
+   103	        box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+   104	    }
+   105	    
+   106	    .header-icon {
+   107	        width: 64px;
+   108	        height: 64px;
+   109	        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+   110	        border-radius: 16px;
+   111	        display: inline-flex;
+   112	        align-items: center;
+   113	        justify-content: center;
+   114	        font-size: 36px;
+   115	        box-shadow: 0 8px 16px rgba(102, 126, 234, 0.4);
+   116	        animation: float 3s ease-in-out infinite;
+   117	    }
+   118	    
+   119	    @keyframes float {
+   120	        0%, 100% { transform: translateY(0px); }
+   121	        50% { transform: translateY(-10px); }
+   122	    }
+   123	    
+   124	    .main-title {
+   125	        color: #ffffff;
+   126	        font-size: 42px;
+   127	        font-weight: 700;
+   128	        margin: 0;
+   129	        text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+   130	    }
+   131	    
+   132	    .subtitle {
+   133	        color: #c7b3ff;
+   134	        font-size: 16px;
+   135	        margin-top: 8px;
+   136	    }
+   137	    
+   138	    /* Card Styles */
+   139	    .glass-card {
+   140	        background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+   141	        backdrop-filter: blur(10px);
+   142	        border-radius: 16px;
+   143	        padding: 28px;
+   144	        border: 1px solid rgba(255,255,255,0.18);
+   145	        box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+   146	        margin-bottom: 20px;
+   147	        transition: all 0.3s ease;
+   148	    }
+   149	    
+   150	    .glass-card:hover {
+   151	        transform: translateY(-2px);
+   152	        box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+   153	        border-color: rgba(255,255,255,0.3);
+   154	    }
+   155	    
+   156	    .step-card {
+   157	        background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+   158	        backdrop-filter: blur(10px);
+   159	        border-radius: 14px;
+   160	        padding: 24px;
+   161	        border: 1px solid rgba(255,255,255,0.15);
+   162	        margin-bottom: 16px;
+   163	        position: relative;
+   164	        overflow: hidden;
+   165	    }
+   166	    
+   167	    .step-card::before {
+   168	        content: '';
+   169	        position: absolute;
+   170	        top: 0;
+   171	        left: 0;
+   172	        right: 0;
+   173	        height: 3px;
+   174	        background: linear-gradient(90deg, #667eea, #764ba2);
+   175	    }
+   176	    
+   177	    .section-title {
+   178	        color: #ffffff;
+   179	        font-size: 20px;
+   180	        font-weight: 600;
+   181	        margin-bottom: 20px;
+   182	        display: flex;
+   183	        align-items: center;
+   184	        gap: 10px;
+   185	    }
+   186	    
+   187	    .section-icon {
+   188	        display: inline-block;
+   189	        width: 32px;
+   190	        height: 32px;
+   191	        background: linear-gradient(135deg, #667eea, #764ba2);
+   192	        border-radius: 8px;
+   193	        text-align: center;
+   194	        line-height: 32px;
+   195	        font-size: 18px;
+   196	    }
+   197	    
+   198	    /* Input Styles */
+   199	    .stTextInput > div > div > input,
+   200	    .stTextArea > div > div > textarea,
+   201	    .stSelectbox > div > div > select {
+   202	        background: rgba(255,255,255,0.08) !important;
+   203	        color: #ffffff !important;
+   204	        border: 1px solid rgba(255,255,255,0.15) !important;
+   205	        border-radius: 10px !important;
+   206	        padding: 12px !important;
+   207	        font-size: 14px !important;
+   208	        transition: all 0.3s ease !important;
+   209	    }
+   210	    
+   211	    .stTextInput > div > div > input:focus,
+   212	    .stTextArea > div > div > textarea:focus,
+   213	    .stSelectbox > div > div > select:focus {
+   214	        background: rgba(255,255,255,0.12) !important;
+   215	        border-color: rgba(102, 126, 234, 0.6) !important;
+   216	        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
+   217	    }
+   218	    
+   219	    /* Button Styles */
+   220	    .stButton > button {
+   221	        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+   222	        color: white !important;
+   223	        border: none !important;
+   224	        border-radius: 12px !important;
+   225	        padding: 16px 32px !important;
+   226	        font-size: 16px !important;
+   227	        font-weight: 600 !important;
+   228	        width: 100%;
+   229	        transition: all 0.3s ease !important;
+   230	        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4) !important;
+   231	        text-transform: none !important;
+   232	    }
+   233	    
+   234	    .stButton > button:hover {
+   235	        transform: translateY(-2px) !important;
+   236	        box-shadow: 0 6px 25px rgba(102, 126, 234, 0.6) !important;
+   237	    }
+   238	    
+   239	    .stButton > button:active {
+   240	        transform: translateY(0px) !important;
+   241	    }
+   242	    
+   243	    /* Download Button */
+   244	    .stDownloadButton > button {
+   245	        background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+   246	        color: white !important;
+   247	        border: none !important;
+   248	        border-radius: 10px !important;
+   249	        padding: 12px 24px !important;
+   250	        font-weight: 600 !important;
+   251	        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4) !important;
+   252	    }
+   253	    
+   254	    /* Sidebar Styles */
+   255	    [data-testid="stSidebar"] {
+   256	        background: linear-gradient(180deg, rgba(26, 11, 46, 0.95) 0%, rgba(45, 27, 105, 0.95) 100%);
+   257	        backdrop-filter: blur(10px);
+   258	        border-right: 1px solid rgba(255,255,255,0.1);
+   259	    }
+   260	    
+   261	    [data-testid="stSidebar"] .stTextInput > div > div > input {
+   262	        background: rgba(255,255,255,0.06) !important;
+   263	        border-color: rgba(255,255,255,0.1) !important;
+   264	    }
+   265	    
+   266	    /* Success/Error Messages */
+   267	    .stSuccess {
+   268	        background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.2) 100%) !important;
+   269	        border-left: 4px solid #10b981 !important;
+   270	        border-radius: 8px !important;
+   271	        color: #d1fae5 !important;
+   272	        backdrop-filter: blur(10px);
+   273	    }
+   274	    
+   275	    .stError {
+   276	        background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.2) 100%) !important;
+   277	        border-left: 4px solid #ef4444 !important;
+   278	        border-radius: 8px !important;
+   279	        color: #fecaca !important;
+   280	        backdrop-filter: blur(10px);
+   281	    }
+   282	    
+   283	    .stWarning {
+   284	        background: linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.2) 100%) !important;
+   285	        border-left: 4px solid #fbbf24 !important;
+   286	        border-radius: 8px !important;
+   287	        color: #fef3c7 !important;
+   288	        backdrop-filter: blur(10px);
+   289	    }
+   290	    
+   291	    /* Spinner */
+   292	    .stSpinner > div {
+   293	        border-top-color: #667eea !important;
+   294	    }
+   295	    
+   296	    /* Divider */
+   297	    hr {
+   298	        border-color: rgba(255,255,255,0.1) !important;
+   299	        margin: 30px 0 !important;
+   300	    }
+   301	    
+   302	    /* Audio Player */
+   303	    audio {
+   304	        width: 100%;
+   305	        border-radius: 10px;
+   306	        background: rgba(255,255,255,0.05);
+   307	    }
+   308	    
+   309	    /* Caption Text */
+   310	    .stCaption {
+   311	        color: #a78bfa !important;
+   312	        font-size: 13px !important;
+   313	    }
+   314	    
+   315	    /* Footer */
+   316	    .footer {
+   317	        text-align: center;
+   318	        color: #a78bfa;
+   319	        font-size: 14px;
+   320	        padding: 30px;
+   321	        margin-top: 50px;
+   322	        background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+   323	        border-radius: 12px;
+   324	        border: 1px solid rgba(255,255,255,0.08);
+   325	    }
+   326	    
+   327	    /* Selectbox Dropdown */
+   328	    [data-baseweb="select"] {
+   329	        background: rgba(255,255,255,0.08) !important;
+   330	    }
+   331	    
+   332	    /* Hide Streamlit Branding */
+   333	    #MainMenu {visibility: hidden;}
+   334	    footer {visibility: hidden;}
+   335	    
+   336	    /* Responsive */
+   337	    @media (max-width: 768px) {
+   338	        .main-title {
+   339	            font-size: 28px;
+   340	        }
+   341	        .header-icon {
+   342	            width: 48px;
+   343	            height: 48px;
+   344	            font-size: 28px;
+   345	        }
+   346	    }
+   347	</style>
+   348	""", unsafe_allow_html=True)
+   349	
+   350	# Initialize database
+   351	init_db()
+   352	
+   353	# -------------------------------------------------------
+   354	# Initialize Session State
+   355	# -------------------------------------------------------
+   356	if 'generated_text' not in st.session_state:
+   357	    st.session_state.generated_text = ""
+   358	if 'media_result' not in st.session_state:
+   359	    st.session_state.media_result = None
+   360	if 'api_keys' not in st.session_state:
+   361	    st.session_state.api_keys = {}
+   362	
+   363	# Get session ID for usage tracking
+   364	session_id = get_session_id()
+   365	
+   366	# -------------------------------------------------------
+   367	# Sidebar API Keys - Enhanced Design
+   368	# -------------------------------------------------------
+   369	with st.sidebar:
+   370	    # Sidebar Header
+   371	    st.markdown("""
+   372	    <div style='text-align: center; padding: 20px 0 30px 0; border-bottom: 1px solid rgba(255,255,255,0.1);'>
+   373	        <div style='font-size: 40px; margin-bottom: 10px;'>🔑</div>
+   374	        <h2 style='color: white; margin: 0; font-size: 24px; font-weight: 700;'>API Configuration</h2>
+   375	        <p style='color: #a78bfa; font-size: 12px; margin-top: 8px;'>Enter only the keys you need</p>
+   376	    </div>
+   377	    """, unsafe_allow_html=True)
+   378	    
+   379	    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
+   380	    
+   381	    # Required Section - Claude
+   382	    st.markdown("""
+   383	    <div style='background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(168, 85, 247, 0.15)); 
+   384	                padding: 16px; border-radius: 12px; border: 1px solid rgba(139, 92, 246, 0.3); margin-bottom: 20px;'>
+   385	        <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 12px;'>
+   386	            <span style='font-size: 20px;'>⚡</span>
+   387	            <span style='color: white; font-weight: 600; font-size: 15px;'>Required: Text Generation</span>
+   388	        </div>
+   389	        <div style='color: #c7b3ff; font-size: 11px; line-height: 1.5;'>
+   390	            Enter your Claude API key to enable AI text generation
+   391	        </div>
+   392	    </div>
+   393	    """, unsafe_allow_html=True)
+   394	    
+   395	    claude_key = st.text_input(
+   396	        "Claude API Key (Anthropic)",
+   397	        type="password",
+   398	        key="claude_key",
+   399	        placeholder="sk-ant-api03-...",
+   400	        help="Get your key from console.anthropic.com"
+   401	    )
+   402	    
+   403	    if claude_key:
+   404	        st.markdown("""
+   405	        <div style='background: rgba(16, 185, 129, 0.15); padding: 10px; border-radius: 8px; 
+   406	                    border-left: 3px solid #10b981; margin-top: 8px;'>
+   407	            <div style='color: #6ee7b7; font-size: 12px; display: flex; align-items: center; gap: 6px;'>
+   408	                <span>✓</span> Claude API key configured
+   409	            </div>
+   410	        </div>
+   411	        """, unsafe_allow_html=True)
+   412	    
+   413	    st.markdown("<div style='height: 25px;'></div>", unsafe_allow_html=True)
+   414	    
+   415	    # Optional Models Expander
+   416	    with st.expander("🔧 Optional: Additional LLM Models", expanded=False):
+   417	        st.markdown("""
+   418	        <div style='color: #a78bfa; font-size: 11px; margin-bottom: 15px; line-height: 1.5;'>
+   419	            Add more AI models for variety. These are completely optional.
+   420	        </div>
+   421	        """, unsafe_allow_html=True)
+   422	        
+   423	        openai_key = st.text_input(
+   424	            "OpenAI GPT-4",
+   425	            type="password",
+   426	            key="openai_key",
+   427	            placeholder="sk-...",
+   428	            help="For GPT-4 text generation"
+   429	        )
+   430	        
+   431	        google_key = st.text_input(
+   432	            "Google Gemini",
+   433	            type="password",
+   434	            key="google_key",
+   435	            placeholder="AIza...",
+   436	            help="For Gemini text generation"
+   437	        )
+   438	        
+   439	        hf_key = st.text_input(
+   440	            "HuggingFace",
+   441	            type="password",
+   442	            key="hf_key",
+   443	            placeholder="hf_...",
+   444	            help="For Llama-2 text generation"
+   445	        )
+   446	    
+   447	    st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+   448	    st.markdown("<div style='border-top: 1px solid rgba(255,255,255,0.1); margin: 20px 0;'></div>", unsafe_allow_html=True)
+   449	    
+   450	    # Audio/Video Section
+   451	    st.markdown("""
+   452	    <div style='background: linear-gradient(135deg, rgba(236, 72, 153, 0.15), rgba(239, 68, 68, 0.15)); 
+   453	                padding: 16px; border-radius: 12px; border: 1px solid rgba(236, 72, 153, 0.3); margin-bottom: 20px;'>
+   454	        <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 12px;'>
+   455	            <span style='font-size: 20px;'>🎵</span>
+   456	            <span style='color: white; font-weight: 600; font-size: 15px;'>Audio/Video Generation</span>
+   457	        </div>
+   458	        <div style='color: #fbbf24; font-size: 11px; line-height: 1.5;'>
+   459	            Choose your preferred TTS provider
+   460	        </div>
+   461	    </div>
+   462	    """, unsafe_allow_html=True)
+   463	    
+   464	    # TTS Provider Selection with custom styling
+   465	    tts_choice = st.radio(
+   466	        "Select Provider:",
+   467	        ["OpenAI TTS (Recommended)", "ElevenLabs", "D-ID Video"],
+   468	        help="Choose the service for converting text to audio/video",
+   469	        label_visibility="visible"
+   470	    )
+   471	    
+   472	    st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
+   473	    
+   474	    # Show appropriate key input based on selection
+   475	    if tts_choice == "OpenAI TTS (Recommended)":
+   476	        if openai_key:
+   477	            openai_tts_key = openai_key
+   478	            st.markdown("""
+   479	            <div style='background: rgba(16, 185, 129, 0.15); padding: 12px; border-radius: 8px; 
+   480	                        border-left: 3px solid #10b981; margin-bottom: 15px;'>
+   481	                <div style='color: #6ee7b7; font-size: 12px; display: flex; align-items: c<response clipped>
