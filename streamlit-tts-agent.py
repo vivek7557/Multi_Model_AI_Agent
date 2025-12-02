@@ -1,12 +1,13 @@
-# app.py — Works on Streamlit Cloud, HF Spaces, RunPod, local, etc.
 import streamlit as st
 import os
 import io
 import tempfile
-from pathlib import Path
+import soundfile as sf
+from moviepy.editor import ImageClip, AudioFileClip
 
-# ------------------- PAGE CONFIG & STYLE -------------------
+# ------------------- PAGE CONFIG -------------------
 st.set_page_config(page_title="Lightning AI Agent", page_icon="Lightning", layout="centered")
+
 st.markdown("""
 <style>
     .big-title {font-size: 3.5rem !important; text-align: center; background: linear-gradient(90deg, #667eea, #764ba2);
@@ -17,152 +18,140 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown('<h1 class="big-title">Lightning AI Agent</h1>', unsafe_allow_html=True)
-st.markdown("<p style='text-align:center;font-size:1.3rem;color:#666;'>Text → Enhanced → Image → Audio → Video in < 12 seconds</p>", unsafe_allow_html=True)
-st.markdown("<div class='speed'>CPU & GPU compatible • No torch errors</div><br>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center;font-size:1.3rem;color:#666;'>Generate → Enhance → Image → Audio → Video in seconds</p>", unsafe_allow_html=True)
+st.markdown("<div class='speed'>CPU + GPU • Zero errors • Instant deploy</div><br>", unsafe_allow_html=True)
 
-# ------------------- LAZY IMPORTS (Fixes torch import crash) -------------------
-@st.cache_resource(show_spinner="Starting the engines...")
+# ------------------- LAZY LOAD HEAVY LIBRARIES -------------------
+@st.cache_resource(show_spinner="Warming up AI models...")
 def load_models():
-    try:
-        import torch
-        from diffusers import StableDiffusionPipeline
-        from parler_tts import ParlerTTSForConditionalGeneration
-        from transformers import AutoTokenizer, pipeline
-    except ImportError as e:
-        st.error(f"Missing dependency: {e}. Run: pip install torch diffusers transformers parler-tts soundfile moviepy")
-        st.stop()
+    import torch
+    from diffusers import StableDiffusionPipeline
+    from parler_tts import ParlerTTSForConditionalGeneration
+    from transformers import AutoTokenizer, pipeline
+    from groq import Groq
+    from anthropic import Anthropic
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     st.info(f"Running on **{device.upper()}**")
 
-    # 1. Fast Image: SD-Turbo (works on CPU too!)
-    with st.spinner("Loading image model..."):
-        pipe_img = StableDiffusionPipeline.from_pretrained(
-            "stabilityai/sd-turbo",
-            torch_dtype=torch.float16 if device == "cuda" else torch.float32,
-            safety_checker=None,
-            variant="fp16" if device == "cuda" else None
-        )
-        pipe_img.to(device)
-        if device == "cuda":
-            pipe_img.enable_attention_slicing()
+    # Image model (SD-Turbo = 1-step super fast)
+    pipe_img = StableDiffusionPipeline.from_pretrained(
+        "stabilityai/sd-turbo",
+        torch_dtype=torch.float16 if device == "cuda" else torch.float32,
+        safety_checker=None,
+        variant="fp16" if device == "cuda" else None
+    )
+    pipe_img.to(device)
+    if device == "cuda":
+        pipe_img.enable_attention_slicing()
 
-    # 2. Fast TTS: Parler-TTS Mini (best quality + works on CPU)
-    with st.spinner("Loading voice model..."):
-        tts_model = ParlerTTSForConditionalGeneration.from_pretrained(
-            "parler-tts/parler-tts-mini-v1"
-        ).to(device)
-        tokenizer = AutoTokenizer.from_pretrained("parler-tts/parler-tts-mini-v1")
-        tts = pipeline("text-to-speech", model=tts_model, tokenizer=tokenizer, device=device)
+    # TTS model (Parler-TTS Mini – works great on CPU too)
+    tts_model = ParlerTTSForConditionalGeneration.from_pretrained(
+        "parler-tts/parler-tts-mini-v1"
+    ).to(device)
+    tokenizer = AutoTokenizer.from_pretrained("parler-tts/parler-tts-mini-v1")
+    tts = pipeline("text-to-speech", model=tts_model, tokenizer=tokenizer, device=device if device == "cuda" else -1)
 
-    # 3. Groq & Claude
-    from groq import Groq
-    from anthropic import Anthropic
+    # API clients
     groq_client = Groq(api_key=st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY"))
     claude_client = Anthropic(api_key=st.secrets.get("ANTHROPIC_API_KEY") or os.getenv("ANTHROPIC_API_KEY"))
 
     return pipe_img, tts, groq_client, claude_client, device
 
 # ------------------- CORE FUNCTIONS -------------------
-def generate_text(prompt):
-    chat = st.session_state.groq.chat.completions.create(
+def generate_text(prompt, groq_client):
+    response = groq_client.chat.completions.create(
         model="llama-3.2-90b-text-preview",
-        messages=[{"role": "user", "content": f"Write a short vivid scene: {prompt}"}],
+        messages=[{"role": "user", "content": f"Write a short vivid scene about: {prompt}"}],
         max_tokens=250,
         temperature=0.8
     )
-    return chat.choices[0].message.content
+    return response.choices[0].message.content
 
-def enhance_text(text):
-    msg = st.session_state.claude.messages.create(
+def enhance_text(text, claude_client):
+    response = claude_client.messages.create(
         model="claude-3-5-sonnet-20241022",
         max_tokens=400,
-        messages=[{"role": "user", "content": f"Make this more cinematic and engaging:\n\n{text}"}]
+        messages=[{"role": "user", "content": f"Rewrite this to be more cinematic and engaging:\n\n{text}"}]
     )
-    return msg.content[0].text
+    return response.content[0].text
 
-def generate_image(prompt):
-    image = st.session_state.pipe_img(prompt, num_inference_steps=1, guidance_scale=0.0).images[0]
+def text_to_image(prompt, pipe):
+    image = pipe(prompt, num_inference_steps=1, guidance_scale=0.0).images[0]
     return image
 
-def generate_audio(text):
-    output = st.session_state.tts(text, forward_params={"description": "A clear female voice speaking slowly"})
+def text_to_audio(text, tts_pipe):
+    output = tts_pipe(text, forward_params={"description": "A clear female voice speaking slowly and calmly"})
     return output["audio"], output["sampling_rate"]
 
-def audio_image_to_video(image, audio_np, sr):
-    import soundfile as sf
-    from moviepy.editor import ImageClip, AudioFileClip
-
+def make_video(image_pil, audio_np, sr):
     with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_wav:
-        sf.write(tmp_wav.name, audio_np.T, sr)  # Parler outputs (channels, samples)
-        audio = AudioFileClip(tmp_wav.name)
+        sf.write(tmp_wav.name, audio_np.T, sr)
+        audio_clip = AudioFileClip(tmp_wav.name)
 
-    duration = audio.duration
-    clip = ImageClip(image).set_duration(duration).set_audio(audio)
-
+    clip = ImageClip(image_pil).set_duration(audio_clip.duration).set_audio(audio_clip)
+    
     with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp_mp4:
         clip.write_videofile(tmp_mp4.name, fps=24, codec="libx264", audio_codec="aac", verbose=False, logger=None)
         video_path = tmp_mp4.name
 
-    # Cleanup
-    audio.close()
+    audio_clip.close()
     clip.close()
     os.unlink(tmp_wav.name)
     return video_path
 
-# ------------------- MAIN -------------------
-prompt = st.text_input("Your idea", placeholder="A samurai robot meditating under cherry blossoms at sunrise...", height=80)
+# ------------------- MAIN APP -------------------
+prompt = st.text_area("Your idea / story", placeholder="A lone astronaut floating above a purple nebula, dramatic lighting...", height=100)
 
 if st.button("Generate Everything (Ultra Fast)", type="primary"):
-    if not prompt:
+    if not prompt.strip():
         st.error("Please enter a prompt!")
-        return
+        st.stop()
 
     # Load models once
-    if "pipe_img" not in st.session_state:
-        pipe_img, tts, groq, claude, device = load_models()
-        st.session_state.pipe_img = pipe_img
-        st.session_state.tts = tts
-        st.session_state.groq = groq
-        st.session_state.claude = claude
+    pipe_img, tts_pipe, groq_client, claude_client, device = load_models()
 
     progress = st.progress(0)
     status = st.empty()
 
     # 1. Text
-    status.info("Generating story...")
-    raw_text = generate_text(prompt)
-    enhanced = enhance_text(raw_text)
-    st.success("Text ready!")
+    status.info("Generating text with Groq...")
+    raw_text = generate_text(prompt, groq_client)
+    enhanced_text = enhance_text(raw_text, claude_client)
     c1, c2 = st.columns(2)
-    with c1: st.subheader("Raw"); st.write(raw_text)
-    with c2: st.subheader("Enhanced"); st.write(enhanced)
+    with c1:
+        st.subheader("Raw Text")
+        st.write(raw_text)
+    with c2:
+        st.subheader("Enhanced (Cinematic)")
+        st.write(enhanced_text)
     progress.progress(25)
 
     # 2. Image
-    status.info("Creating image (SD-Turbo)...")
-    img = generate_image(enhanced)
-    st.image(img, use_column_width=True)
+    status.info("Generating image (SD-Turbo)...")
+    image = text_to_image(enhanced_text, pipe_img)
+    st.image(image, use_column_width=True)
     progress.progress(50)
 
     # 3. Audio
-    status.info("Speaking with Parler-TTS...")
-    audio_np, sr = generate_audio(enhanced)
+    status.info("Generating voice (Parler-TTS)...")
+    audio_np, sr = text_to_audio(enhanced_text, tts_pipe)
     audio_bytes = io.BytesIO()
-    import soundfile as sf
     sf.write(audio_bytes, audio_np.T, sr, format="WAV")
     audio_bytes.seek(0)
     st.audio(audio_bytes, format="audio/wav")
     progress.progress(75)
 
     # 4. Video
-    status.info("Building video...")
-    video_path = audio_image_to_video(img, audio_np, sr)
+    status.info("Creating video...")
+    video_path = make_video(image, audio_np, sr)
     st.video(video_path)
+
     with open(video_path, "rb") as f:
-        st.download_button("Download Video", f, "ai_video.mp4", "video/mp4")
+        st.download_button("Download Video MP4", f, "ai_video.mp4", "video/mp4")
+
     progress.progress(100)
-    st.success("Done in seconds! Lightning")
+    st.success("All done in seconds! Lightning")
     st.balloons()
 
     # Cleanup
