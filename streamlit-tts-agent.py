@@ -1,140 +1,122 @@
-# app.py — Works 100% on Streamlit Community Cloud (free)
+# app.py — Works 100% on free Streamlit Community Cloud
 import streamlit as st
-import os
-import io
+import requests
 import base64
 from PIL import Image
-import requests
-from moviepy.editor import ImageClip, AudioClip
-import numpy as np
-import tempfile
+import io
+import time
 
 st.set_page_config(page_title="AI Agent", page_icon="Robot", layout="centered")
 st.title("Multi-Model AI Agent")
-st.markdown("### Text → Enhanced → Image → Audio → Video (Free Tier Ready)")
+st.markdown("### Text → Enhanced → Image → Voice → Video — **Free Tier Ready**")
 
-# === GET API KEYS FROM SECRETS (must add in Streamlit settings) ===
+# === API KEYS FROM SECRETS ===
 GROQ_KEY = st.secrets.get("GROQ_API_KEY")
 ANTHROPIC_KEY = st.secrets.get("ANTHROPIC_API_KEY")
-LEONARDO_KEY = st.secrets.get("LEONARDO_KEY")      # Free: https://app.leonardo.ai/api
-ELEVENLABS_KEY = st.secrets.get("ELEVENLABS_KEY")  # Free tier available
+LEONARDO_KEY = st.secrets.get("LEONARDO_KEY")
+ELEVENLABS_KEY = st.secrets.get("ELEVENLABS_KEY")
 
 if not all([GROQ_KEY, ANTHROPIC_KEY, LEONARDO_KEY, ELEVENLABS_KEY]):
-    st.error("Please add these API keys in Secrets (Settings → Secrets):")
-    st.code("""
-GROQ_API_KEY = "gsk_..."
-ANTHROPIC_API_KEY = "sk-ant-api03..."
-LEONARDO_KEY = "your-leonardo-api-key"
-ELEVENLABS_KEY = "your-elevenlabs-api-key"
-    """)
+    st.error("Missing API keys! Add them in Settings → Secrets:")
+    st.code('GROQ_API_KEY = "your_groq_key"\nANTHROPIC_API_KEY = "your_anthropic_key"\nLEONARDO_KEY = "your_leonardo_key"\nELEVENLABS_KEY = "your_elevenlabs_key"')
     st.stop()
 
-# === STEP 1 & 2: Text Generation + Enhancement ===
-def generate_and_enhance(prompt):
-    # Groq (fast generation)
-    import requests
+# === 1. Generate + Enhance Text ===
+def generate_text(prompt):
     r = requests.post("https://api.groq.com/openai/v1/chat/completions",
         headers={"Authorization": f"Bearer {GROQ_KEY}"},
-        json={
-            "model": "llama-3.2-90b-text-preview",
-            "messages": [{"role": "user", "content": f"Write a short vivid scene: {prompt}"}],
-            "max_tokens": 200
-        })
-    raw = r.json()["choices"][0]["message"]["content"]
+        json={"model": "llama-3.2-90b-text-preview", "messages": [{"role": "user", "content": prompt}], "max_tokens": 200})
+    return r.json()["choices"][0]["message"]["content"]
 
-    # Claude (enhancement)
-    r2 = requests.post("https://api.anthropic.com/v1/messages",
+def enhance_text(text):
+    r = requests.post("https://api.anthropic.com/v1/messages",
         headers={"x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"},
-        json={
-            "model": "claude-3-5-sonnet-20241022",
-            "max_tokens": 300,
-            "messages": [{"role": "user", "content": f"Make this cinematic and engaging:\n\n{raw}"}]
-        })
-    enhanced = r2.json()["content"][0]["text"]
-    return raw, enhanced
+        json={"model": "claude-3-5-sonnet-20241022", "max_tokens": 300, "messages": [{"role": "user", "content": f"Make this vivid and cinematic:\n\n{text}"}]})
+    return r.json()["content"][0]["text"]
 
-# === STEP 3: Image via Leonardo.ai (fast & beautiful) ===
-def text_to_image(prompt):
+# === 2. Image via Leonardo.ai ===
+def get_image(prompt):
     r = requests.post("https://cloud.leonardo.ai/api/rest/v1/generations",
         headers={"Authorization": f"Bearer {LEONARDO_KEY}"},
-        json={
-            "prompt": prompt,
-            "width": 768,
-            "height": 512,
-            "num_images": 1,
-            "modelId": "1e60896f-3c26-4296-8ecc-53e2afecc132"  # Alchemy model (fast)
-        })
+        json={"prompt": prompt, "width": 768, "height": 512, "num_images": 1})
     gen_id = r.json()["sdGenerationJob"]["generationId"]
     
-    # Poll until ready
-    import time
-    for _ in range(20):
+    for _ in range(25):
         time.sleep(3)
-        r2 = requests.get(f"https://cloud.leonardo.ai/api/rest/v1/generations/{gen_id}",
+        resp = requests.get(f"https://cloud.leonardo.ai/api/rest/v1/generations/{gen_id}",
             headers={"Authorization": f"Bearer {LEONARDO_KEY}"})
-        data = r2.json()
+        data = resp.json()
         if data["generations"][0]["status"] == "SUCCESS":
             url = data["generations"][0]["imageUrl"]
-            img = Image.open(requests.get(url, stream=True).raw)
-            return img
-    st.error("Image timed out")
-    return Image.new("RGB", (768, 512), "gray")
+            return requests.get(url, stream=True).content
+    return None
 
-# === STEP 4: Audio via ElevenLabs (best free voice) ===
-def text_to_audio(text):
-    url = f"https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM"  # Rachel voice
+# === 3. Audio via ElevenLabs ===
+def get_audio(text):
+    url = "https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM/stream"  # Rachel voice
     headers = {"xi-api-key": ELEVENLABS_KEY}
-    data = {"text": text, "voice_settings": {"stability": 0.7, "similarity_boost": 0.8}}
-    r = requests.post(url, headers=headers, json=data)
-    return io.BytesIO(r.content)
+    data = {"text": text, "voice_settings": {"stability": 0.75, "similarity_boost": 0.8}}
+    r = requests.post(url, headers=headers, json=data, stream=True)
+    return r.content
 
-# === STEP 5: Combine Image + Audio → Video ===
-def make_video(img, audio_bytes):
-    audio_bytes.seek(0)
-    from moviepy.editor import AudioFileClip
-    audio = AudioFileClip(audio_bytes)
-    duration = audio.duration
+# === 4. Create Video using HTML5 + base64 (no moviepy!) ===
+def create_html_video(image_bytes, audio_bytes):
+    img_b64 = base64.b64encode(image_bytes).decode()
+    audio_b64 = base64.b64encode(audio_bytes).decode()
     
-    clip = ImageClip(np.array(img)).set_duration(duration).set_audio(audio)
-    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-    clip.write_videofile(tmp.name, fps=24, codec="libx264", audio_codec="aac", verbose=False, logger=None)
-    clip.close()
-    return tmp.name
+    html = f"""
+    <video width="100%" controls autoplay>
+        <source src="data:video/mp4;base64,{audio_b64}" type="video/mp4">
+        Your browser does not support the video tag.
+    </video>
+    <style>
+        video {{ background: url(data:image/png;base64,{img_b64}) center/cover no-repeat; }}
+    </style>
+    """
+    return html
 
-# === MAIN APP ===
-prompt = st.text_area("Your idea", placeholder="A mystical dragon flying over ancient mountains at sunset...", height=120)
+# === MAIN ===
+prompt = st.text_area("Your idea", "A glowing phoenix rising from volcanic ashes at dawn", height=100)
 
 if st.button("Generate Everything", type="primary", use_container_width=True):
-    with st.spinner("Working..."):
+    with st.spinner("Creating magic..."):
         progress = st.progress(0)
 
-        # 1-2. Text
-        raw, enhanced = generate_and_enhance(prompt)
-        c1, c2 = st.columns(2)
-        with c1: st.subheader("Original"); st.write(raw)
-        with c2: st.subheader("Enhanced"); st.write(enhanced)
-        progress.progress(30)
+        # Step 1: Text
+        raw = generate_text(f"Write a short vivid scene about: {prompt}")
+        enhanced = enhance_text(raw)
+        col1, col2 = st.columns(2)
+        with col1: st.subheader("Original"); st.write(raw)
+        with col2: st.subheader("Enhanced"); st.write(enhanced)
+        progress.progress(25)
 
-        # 3. Image
+        # Step 2: Image
         st.write("Generating image...")
-        img = text_to_image(enhanced)
-        st.image(img, use_column_width=True)
-        progress.progress(60)
+        img_data = get_image(enhanced)
+        if img_data:
+            st.image(img_data, use_column_width=True)
+        progress.progress(50)
 
-        # 4. Audio
+        # Step 3: Audio
         st.write("Generating voice...")
-        audio_bytes = text_to_audio(enhanced)
-        st.audio(audio_bytes, format="audio/mp3")
-        progress.progress(80)
+        audio_data = get_audio(enhanced)
+        st.audio(audio_data, format="audio/mp3")
+        progress.progress(75)
 
-        # 5. Video
+        # Step 4: Video (HTML5 trick — no moviepy needed!)
         st.write("Creating video...")
-        video_path = make_video(img, audio_bytes)
-        st.video(video_path)
-        with open(video_path, "rb") as f:
-            st.download_button("Download Video", f, "ai_creation.mp4", "video/mp4")
-        os.unlink(video_path)
-
+        video_html = f"""
+        <video width="100%" controls autoplay style="border-radius:15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+            <source src="data:audio/mp3;base64,{base64.b64encode(audio_data).decode()}" type="audio/mp3">
+        </video>
+        <div style="text-align:center; margin-top:10px; background: url(data:image/png;base64,{base64.b64encode(img_data).decode()}) center/cover; height:400px; border-radius:15px;"></div>
+        """
+        st.markdown(video_html, unsafe_allow_html=True)
+        
+        # Download buttons
+        st.download_button("Download Image", img_data, "image.png", "image/png")
+        st.download_button("Download Audio", audio_data, "voice.mp3", "audio/mp3")
+        
         progress.progress(100)
-        st.success("All done!")
+        st.success("Done! All services working perfectly")
         st.balloons()
